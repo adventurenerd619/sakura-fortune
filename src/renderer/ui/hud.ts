@@ -1,5 +1,16 @@
 import { h, makeModal, svgUrl, type Modal } from './dom';
-import { pineBranchSvg } from '../art/svg';
+import { pineBranchSvg, bellSymbol, maskSymbol, omikujiBoxSvg } from '../art/svg';
+
+/** One consistent line-icon set (24 px grid, drawn in the current text colour). */
+const icon = (body: string) => `<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+export const ICONS = {
+  info: icon('<circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><circle cx="12" cy="7.5" r="0.6" fill="currentColor"/>'),
+  stats: icon('<path d="M4 20h16"/><path d="M7 16v-5M12 16V6M17 16v-8"/>'),
+  settings: icon('<path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/>'),
+  sound: icon('<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/>'),
+  muted: icon('<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l5 6M22 9l-5 6"/>'),
+  fullscreen: icon('<path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/>'),
+};
 import { ADD_CREDIT_OPTIONS, ADD_CREDIT_MAX, BONUS_BUY } from '../../config/math';
 
 export interface Hud {
@@ -34,44 +45,58 @@ export function buildHud(root: HTMLElement): Hud {
     h('div', { class: 'title-main' }, 'Sakura Fortune'),
     h('div', { class: 'title-sub' }, 'Spring festival · play money only'));
 
-  // top-right icon buttons
-  const btnInfo = btn('icon', 'i', 'Paytable and rules');
-  const btnStats = btn('icon', '☰', 'Stats');
-  const btnSettings = btn('icon', '⚙', 'Settings');
-  const btnMute = btn('icon', '♪', 'Mute / unmute');
-  const btnFull = btn('icon', '⛶', 'Fullscreen (F11)');
-  const btnFunds = btn('gold small', '+ Funds', 'Add free play money');
-  const topBar = h('div', { id: 'topbar' }, btnFunds, btnInfo, btnStats, btnSettings, btnMute, btnFull);
+  // top-right icon buttons: one drawn icon set, grouped on a lacquer rail
+  const iconBtn = (name: keyof typeof ICONS, title: string) => {
+    const b = h('button', { class: 'btn icon', title, 'aria-label': title, html: ICONS[name] }) as HTMLButtonElement;
+    return b;
+  };
+  const btnInfo = iconBtn('info', 'Paytable and rules');
+  const btnStats = iconBtn('stats', 'Stats');
+  const btnSettings = iconBtn('settings', 'Settings');
+  const btnMute = iconBtn('sound', 'Mute / unmute');
+  const btnFull = iconBtn('fullscreen', 'Fullscreen (F11)');
+  const topBar = h('div', { id: 'topbar' }, btnInfo, btnStats, btnSettings, btnMute, btnFull);
 
-  // side panel: bonus buy + feature status
+  // side column: bonus buy, then either the feature guide (base game) or the live feature panel
   const btnBuy = btn('buy', 'BUY BONUS', 'Buy the Torii Path or Free Spins');
   const fpTitle = h('div', { class: 'fp-title' });
   const fpLine1 = h('div', { class: 'fp-line big' });
   const fpLine2 = h('div', { class: 'fp-line' });
   const fpLine3 = h('div', { class: 'fp-line' });
   const featurePanel = h('div', { id: 'featurePanel' }, fpTitle, fpLine1, fpLine2, fpLine3);
-  const side = h('div', { id: 'side' }, btnBuy, featurePanel);
+  const guideRow = (img: string, how: string, what: string) => h('div', { class: 'guide-row' },
+    h('img', { src: svgUrl(img), alt: '' }), h('div', {}, h('div', { class: 'guide-how' }, how), h('div', { class: 'guide-what' }, what)));
+  const guide = h('div', { class: 'feature-guide' },
+    h('div', { class: 'guide-title' }, 'Festival Features'),
+    guideRow(bellSymbol(), '3+ Shrine Bells', 'Lantern Festival free spins'),
+    guideRow(maskSymbol(), 'Masks on reels 1 · 3 · 5', 'Torii Path climb'),
+    guideRow(omikujiBoxSvg(), 'A spin with no win', 'Omikuji fortune draw'),
+    h('div', { class: 'guide-foot' }, 'Every win cascades: ×1 ×2 ×3 ×5'));
+  const side = h('div', { id: 'side' }, btnBuy, featurePanel, guide);
 
-  // bottom bar
-  const box = (label: string, cls = '') => {
+  // bottom bar: lacquered rail with three plaques (balance, bet, win) and the spin controls
+  const plaque = (label: string, cls: string) => {
     const l = h('div', { class: 'lbl' }, label), v = h('div', { class: 'val' });
-    return { el: h('div', { class: 'box ' + cls }, l, v), l, v };
+    return { el: h('div', { class: 'plaque ' + cls }, l, v), l, v };
   };
-  const bal = box('BALANCE', 'balance');
-  const betB = box('BET');
-  const winB = box('WIN', 'win');
+  const bal = plaque('BALANCE', 'balance');
+  const betB = plaque('BET', 'bet');
+  const winB = plaque('WIN', 'win');
+  const btnFunds = btn('round mini gold', '+', 'Add free play money');
+  bal.el.append(btnFunds);
   const betMinus = btn('round small', '−', 'Lower bet');
   const betPlus = btn('round small', '+', 'Raise bet');
   const btnDenom = btn('chip', '1¢', 'Denomination: value of one credit');
   const btnMoney = btn('chip', 'Show Credits', 'Switch between dollars and credits');
+  // bet plaque: − value + on one row, denomination and view chips under it
+  betB.v.remove();
+  betB.el.append(h('div', { class: 'betrow' }, betMinus, betB.v, betPlus), h('div', { class: 'chips' }, btnDenom, btnMoney));
   const autoBtn = btn('pill', 'AUTO', 'Auto-spin');
   const turboBtn = btn('pill', 'TURBO', 'Faster reels and animations');
   const spinBtn = btn('spin', 'SPIN', 'Spin (Space)');
-  const betGroup = h('div', { class: 'betgroup' }, betMinus, betB.el, betPlus);
-  const left = h('div', { class: 'hud-left' }, bal.el, h('div', { class: 'chips' }, btnDenom, btnMoney));
   const right = h('div', { class: 'hud-right' }, autoBtn, spinBtn, turboBtn);
   const message = h('div', { id: 'message' });
-  const hud = h('div', { id: 'hud' }, left, betGroup, winB.el, right);
+  const hud = h('div', { id: 'hud' }, bal.el, betB.el, winB.el, right);
 
   // auto menu & denom menu
   const autoMenu = h('div', { class: 'popmenu', id: 'autoMenu' });

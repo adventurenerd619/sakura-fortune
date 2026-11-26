@@ -13,7 +13,7 @@ import { Effects } from './scene/effects';
 import { Overlays } from './scene/overlays';
 import { ToriiPath } from './scene/toriiPath';
 import { fmt, fmtExact, money, denomLabel, textStyle, CELL_W, CELL_H } from './scene/symbols';
-import { buildHud, type Hud } from './ui/hud';
+import { buildHud, ICONS, type Hud } from './ui/hud';
 import { StatsBook } from './ui/statsBook';
 import { Paytable } from './ui/paytable';
 import { h } from './ui/dom';
@@ -468,7 +468,7 @@ class Game {
     u.btnMoney.textContent = s.moneyMode === 'credits' ? 'Show in $' : 'Show Credits';
     u.turboBtn.classList.toggle('on', s.turbo);
     u.btnMute.classList.toggle('on', s.muted);
-    u.btnMute.textContent = s.muted ? '✕' : '♪';
+    u.btnMute.innerHTML = s.muted ? ICONS.muted : ICONS.sound;
     u.autoBtn.textContent = this.autoLeft > 0 ? (this.autoUntilFeature ? 'STOP ∞' : `STOP ${this.autoLeft}`) : 'AUTO';
     u.autoBtn.classList.toggle('on', this.autoLeft > 0);
     u.buyToriiPrice.textContent = fmt(bonusBuyCost('torii', this.bet));

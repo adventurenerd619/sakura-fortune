@@ -63,7 +63,8 @@ export const PORTRAIT_HUD_H = 430;
 function portrait(h: number): Layout {
   const reelY = h - PORTRAIT_HUD_H - 60 - REELS_H;
   const top = 250; // below the title
-  const ms = Math.max(0.72, Math.min(0.9, (reelY - 60 - top) / 520));
+  // the mascot grows into the space taller phones have, leaving room above the reels for the message line
+  const ms = Math.max(0.72, Math.min(1.05, (reelY - 150 - top) / 520));
   const pathTop = 330, pathBottom = h - PORTRAIT_HUD_H - 230;
   const rows = 6, rowH = (pathBottom - pathTop) / rows;
   const pts: Pt[] = [];
@@ -76,7 +77,7 @@ function portrait(h: number): Layout {
     orientation: 'portrait', w: 1080, h,
     cx: 540, cy: Math.round(h * 0.42),
     reelX: (1080 - REELS_W) / 2, reelY,
-    mascot: { x: 30, y: top + Math.max(0, (reelY - 60 - top - 520 * ms) / 2), s: ms },
+    mascot: { x: 30, y: top + Math.max(0, (reelY - 150 - top - 520 * ms) / 2), s: ms },
     bg: { s: h / 1080, x: 540 - 960 * (h / 1080), y: 0 },
     omikuji: { x: 860, y: reelY - 70, s: 0.8 },
     lanterns: { x: 700, y: 600, dx: 110 },

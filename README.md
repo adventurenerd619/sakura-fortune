@@ -93,8 +93,8 @@ Builds the web bundle, syncs it into the Capacitor project in `android/` and pro
 | Denom (1¢) | Value of one credit: 1¢, 2¢, 5¢, 10¢, 25¢, 50¢ or $1 |
 | Show Credits / Show in $ | Switch every amount on screen between dollars (default) and credits |
 | BUY BONUS | Torii Path (60× bet) or Lantern Festival (80× bet) |
-| i / ☰ / ⚙ / ♪ | Paytable & rules / Stats / Settings / Mute (remembered) |
-| + Funds | Add free play money ($100 / $500 / $1,000 or any amount up to $1,000) |
+| Icon rail (top right) | Paytable & rules, Stats, Settings, Mute (remembered), Fullscreen |
+| + on the Balance plaque | Add free play money ($100 / $500 / $1,000 or any amount up to $1,000) |
 
 On the Torii Path and at the Omikuji box you can also just tap the screen.
 
