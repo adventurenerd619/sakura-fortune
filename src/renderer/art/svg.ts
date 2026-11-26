@@ -48,15 +48,28 @@ export const sakura = (cx: number, cy: number, r: number, fill = PAL.pink, w = 3
 
 /** High symbols: indigo disc with a gold ring. */
 function highDisc() {
-  return `<circle cx="100" cy="104" r="90" fill="#000" opacity="0.25"/>
-    <circle cx="100" cy="100" r="88" fill="url(#ring)" stroke="${INK}" stroke-width="4"/>
-    <circle cx="100" cy="100" r="76" fill="url(#disc)" stroke="${INK}" stroke-width="3"/>
+  return `<circle cx="100" cy="100" r="90" fill="url(#ring)" stroke="${INK}" stroke-width="5"/>
+    <path d="M28,78 A76,76 0 0 1 132,22" fill="none" stroke="#fff6d8" stroke-width="5" stroke-linecap="round" opacity="0.75"/>
+    <circle cx="100" cy="100" r="80" fill="none" stroke="${PAL.goldD}" stroke-width="2"/>
+    <circle cx="100" cy="100" r="76" fill="url(#disc)" stroke="${INK}" stroke-width="3.5"/>
     ${line('M48,150 C60,140 74,140 86,150 C98,160 112,160 124,150 C136,140 150,140 160,150', PAL.indigoL, 3, 0.6)}
-    ${line('M40,166 C52,156 66,156 78,166', PAL.indigoL, 3, 0.4)}`;
+    ${line('M40,166 C52,156 66,156 78,166', PAL.indigoL, 3, 0.4)}
+    <path d="M44,84 A58,58 0 0 1 112,34" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" opacity="0.13"/>`;
 }
-const highDefs = () => linear('ring', [[0, PAL.goldL], [0.5, PAL.gold], [1, PAL.goldD]]) + radial('disc', [[0, PAL.indigoL], [1, PAL.indigoD]], 0.45, 0.35, 0.7);
-/** Low symbols: soft washi circle. */
-const lowDisc = (tint: string) => `<circle cx="100" cy="102" r="80" fill="${tint}" opacity="0.55"/><circle cx="100" cy="102" r="80" fill="none" stroke="${INK}" stroke-width="2" opacity="0.25"/>`;
+const highDefs = () => linear('ring', [[0, '#fff1bf'], [0.35, PAL.goldL], [0.7, PAL.gold], [1, PAL.goldD]], 1, 1) + radial('disc', [[0, '#4a5c8c'], [0.6, PAL.indigo], [1, PAL.indigoD]], 0.42, 0.32, 0.75);
+/** Low symbols: a solid tinted medallion with an ink ring, a cream rim and a soft gloss. */
+const lowDisc = (tint: string, rim: string) => `<defs>${radial('lowFill', [[0, '#fffaf0'], [0.55, tint], [1, tint]], 0.4, 0.32, 0.75)}</defs>
+  <circle cx="100" cy="102" r="82" fill="url(#lowFill)" stroke="${INK}" stroke-width="3.5"/>
+  <circle cx="100" cy="102" r="75" fill="none" stroke="${rim}" stroke-width="2" opacity="0.55"/>
+  <path d="M40,86 A62,62 0 0 1 112,38" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" opacity="0.5"/>`;
+
+/** Adds a soft ink drop shadow under a whole symbol so it lifts off the washi panel. */
+function lift(svg: string) {
+  const filter = '<filter id="lift" x="-10%" y="-10%" width="120%" height="125%"><feDropShadow dx="0" dy="5" stdDeviation="3.5" flood-color="#1b1a2e" flood-opacity="0.45"/></filter>';
+  const open = svg.indexOf('</defs>') + 7, close = svg.lastIndexOf('</svg>');
+  return svg.slice(0, open).replace('<defs>', '<defs>' + filter) +
+    `<g filter="url(#lift)"><g transform="translate(100 98) scale(0.95) translate(-100 -100)">${svg.slice(open, close)}</g></g></svg>`;
+}
 
 // ======================= high symbols =======================
 
@@ -150,7 +163,7 @@ export function mochiSymbol() {
     const a = i * 2.39, r = 10 + (i * 37) % 38;
     grains += `<ellipse cx="${(100 + Math.cos(a) * r * 1.2).toFixed(1)}" cy="${(96 + Math.sin(a) * r * 0.6).toFixed(1)}" rx="3" ry="1.8" fill="#fff" opacity="0.6"/>`;
   }
-  return wrap(200, 200, lowDisc(PAL.pinkL) + `
+  return wrap(200, 200, lowDisc('#f8c6d1', PAL.pinkD) + `
     ${ink('M38,108 C38,70 70,58 100,58 C130,58 162,70 162,108 C162,138 130,148 100,148 C70,148 38,138 38,108 Z', PAL.pink)}
     ${grains}
     ${ink('M30,112 C40,156 160,156 170,112 C150,138 124,132 100,140 C76,132 50,138 30,112 Z', PAL.green)}
@@ -159,7 +172,7 @@ export function mochiSymbol() {
 }
 
 export function teacupSymbol() {
-  return wrap(200, 200, lowDisc('#d9e4c8') + `
+  return wrap(200, 200, lowDisc('#c9ddb4', PAL.greenD) + `
     ${line('M86,48 C76,38 96,30 86,18 M112,50 C102,40 122,32 112,20', '#8c8c8c', 4, 0.6)}
     ${ink('M56,72 L144,72 L136,158 C136,168 64,168 64,158 Z', PAL.indigo)}
     <path d="M60,104 L140,104 L138,124 L62,124 Z" fill="${PAL.cream}"/>
@@ -170,7 +183,7 @@ export function teacupSymbol() {
 }
 
 export function craneSymbol() {
-  return wrap(200, 200, lowDisc('#dfe3ef') + `<g stroke="${INK}" stroke-width="3.5" stroke-linejoin="round">
+  return wrap(200, 200, lowDisc('#cfd8f2', PAL.indigoL) + `<g stroke="${INK}" stroke-width="3.5" stroke-linejoin="round">
     <polygon points="100,104 36,34 92,88" fill="${PAL.pink}"/>
     <polygon points="100,104 174,28 110,90" fill="${PAL.pinkL}"/>
     <polygon points="58,116 100,96 142,116 100,136" fill="${PAL.pink}"/>
@@ -189,14 +202,14 @@ export function bambooSymbol() {
       line(`M${x - w / 4},${top + 6} L${x - w / 4},172`, '#fff', 2, 0.3);
   };
   const leaf = (x: number, y: number, a: number) => `<g transform="translate(${x} ${y}) rotate(${a})">${ink('M0,0 C14,-8 40,-6 56,0 C40,6 14,8 0,0 Z', PAL.greenL, 2.5)}</g>`;
-  return wrap(200, 200, lowDisc('#d6e6c4') + stalk(76, 30, 22) + stalk(112, 50, 20) + stalk(140, 74, 16) +
+  return wrap(200, 200, lowDisc('#bfdca4', PAL.greenD) + stalk(76, 30, 22) + stalk(112, 50, 20) + stalk(140, 74, 16) +
     leaf(88, 58, -30) + leaf(90, 62, 10) + leaf(122, 90, -50) + leaf(64, 100, 200) + leaf(150, 104, -20),
   linear('bam', [[0, PAL.greenL], [1, PAL.green]], 1, 0));
 }
 
 export function monSymbol() {
   const petal = (a: number) => `<g transform="rotate(${a} 100 102)">${ink('M100,102 C88,88 86,62 100,46 C114,62 112,88 100,102 Z', PAL.cream, 3)}${line('M100,96 L100,60', PAL.creamD, 2)}</g>`;
-  return wrap(200, 200, lowDisc('#f0d4d0') + `
+  return wrap(200, 200, lowDisc('#f4c3bb', PAL.redD) + `
     <circle cx="100" cy="102" r="66" fill="${PAL.red}" stroke="${INK}" stroke-width="4"/>
     <circle cx="100" cy="102" r="56" fill="none" stroke="${PAL.cream}" stroke-width="4"/>
     ${[0, 90, 180, 270].map(petal).join('')}
@@ -242,7 +255,7 @@ export function wildSymbol() {
 
 export function bellSymbol() {
   let rays = '';
-  for (let i = 0; i < 16; i++) rays += `<path d="M100,104 L${100 + Math.cos(i * 0.3927 - 0.1) * 96},${104 + Math.sin(i * 0.3927 - 0.1) * 96} L${100 + Math.cos(i * 0.3927 + 0.1) * 96},${104 + Math.sin(i * 0.3927 + 0.1) * 96} Z" fill="${PAL.goldL}" opacity="${i % 2 ? 0.25 : 0.45}"/>`;
+  for (let i = 0; i < 16; i++) rays += `<path d="M100,104 L${100 + Math.cos(i * 0.3927 - 0.1) * 96},${104 + Math.sin(i * 0.3927 - 0.1) * 96} L${100 + Math.cos(i * 0.3927 + 0.1) * 96},${104 + Math.sin(i * 0.3927 + 0.1) * 96} Z" fill="${PAL.goldL}" opacity="${i % 2 ? 0.4 : 0.75}"/>`;
   let rope = '';
   for (let i = 0; i < 6; i++) rope += ink(`M92,${8 + i * 9} L108,${12 + i * 9} L108,${20 + i * 9} L92,${16 + i * 9} Z`, i % 2 ? PAL.white : PAL.red, 2);
   return wrap(200, 200, `
@@ -256,17 +269,17 @@ export function bellSymbol() {
     <ellipse cx="78" cy="84" rx="14" ry="8" fill="#fff" opacity="0.55" transform="rotate(-25 78 84)"/>
     <rect x="34" y="166" width="132" height="28" rx="8" fill="${PAL.red}" stroke="${INK}" stroke-width="3"/>
     <text x="100" y="187" text-anchor="middle" font-family="Georgia, 'Palatino Linotype', serif" font-weight="bold" font-size="18" fill="${PAL.goldL}" letter-spacing="2">SCATTER</text>`,
-  radial('bglow', [[0, '#fff3c2', 0.9], [0.6, '#f2d27a', 0.35], [1, '#f2d27a', 0]]) + radial('bell', [[0, '#fff1b8'], [0.45, PAL.goldL], [1, PAL.goldD]], 0.38, 0.3, 0.8));
+  radial('bglow', [[0, '#fff3c2', 1], [0.55, '#f2d27a', 0.6], [1, '#f2d27a', 0]]) + radial('bell', [[0, '#fff1b8'], [0.45, PAL.goldL], [1, PAL.goldD]], 0.38, 0.3, 0.8));
 }
 
 export function maskSymbol() {
   let fire = '';
   for (let i = 0; i < 7; i++) {
     const a = -Math.PI / 2 + (i - 3) * 0.5, x = 100 + Math.cos(a) * 82, y = 104 + Math.sin(a) * 72;
-    fire += `<path d="M${x},${y + 12} C${x - 10},${y} ${x - 4},${y - 10} ${x},${y - 18} C${x + 4},${y - 10} ${x + 10},${y} ${x},${y + 12} Z" fill="#8fd3ff" opacity="0.7"/>`;
+    fire += `<path d="M${x},${y + 12} C${x - 10},${y} ${x - 4},${y - 10} ${x},${y - 18} C${x + 4},${y - 10} ${x + 10},${y} ${x},${y + 12} Z" fill="#8fd3ff" stroke="#2a6aa0" stroke-width="1.5" opacity="0.9"/>`;
   }
   return wrap(200, 200, `
-    <circle cx="100" cy="104" r="92" fill="url(#mglow)"/>${fire}
+    <circle cx="100" cy="104" r="92" fill="url(#mglow)"/><circle cx="100" cy="104" r="80" fill="none" stroke="#b58cff" stroke-width="4" opacity="0.7"/>${fire}
     ${ink('M40,32 L72,70 C84,64 116,64 128,70 L160,32 L158,98 C154,132 124,166 100,178 C76,166 46,132 42,98 Z', PAL.white)}
     <path d="M48,44 L68,68 C62,70 56,74 52,80 Z" fill="${PAL.red}"/><path d="M152,44 L132,68 C138,70 144,74 148,80 Z" fill="${PAL.red}"/>
     ${ink('M60,102 C70,90 84,90 90,100 C80,106 70,108 60,102 Z', PAL.red, 2.5)}${ink('M140,102 C130,90 116,90 110,100 C120,106 130,108 140,102 Z', PAL.red, 2.5)}
@@ -278,10 +291,11 @@ export function maskSymbol() {
     ${line('M52,140 L76,136 M52,150 L76,144 M148,140 L124,136 M148,150 L124,144', INK, 2, 0.6)}
     <rect x="50" y="170" width="100" height="26" rx="8" fill="${PAL.purple}" stroke="${INK}" stroke-width="3"/>
     <text x="100" y="190" text-anchor="middle" font-family="Georgia, 'Palatino Linotype', serif" font-weight="bold" font-size="17" fill="${PAL.cream}" letter-spacing="2">BONUS</text>`,
-  radial('mglow', [[0, '#c9a7ff', 0.75], [0.6, '#6a4c9c', 0.45], [1, '#3a2a5c', 0]]));
+  radial('mglow', [[0, '#e2ccff', 1], [0.55, '#8a63c9', 0.75], [1, '#3a2a5c', 0]]));
 }
 
-export const SYMBOL_SVGS = [koiSymbol, toriiSymbol, fanSymbol, kabutoSymbol, lanternSymbol, mochiSymbol, teacupSymbol, craneSymbol, bambooSymbol, monSymbol, wildSymbol, bellSymbol, maskSymbol];
+/** Reel symbols, each lifted off the washi paper by a soft ink drop shadow. */
+export const SYMBOL_SVGS = [koiSymbol, toriiSymbol, fanSymbol, kabutoSymbol, lanternSymbol, mochiSymbol, teacupSymbol, craneSymbol, bambooSymbol, monSymbol, wildSymbol, bellSymbol, maskSymbol].map((f) => () => lift(f()));
 
 // ======================= reel frame =======================
 

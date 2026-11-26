@@ -1,5 +1,5 @@
 import { Container, Graphics, Sprite, Text } from 'pixi.js';
-import { SymbolView, CELL_W, CELL_H, textStyle } from './symbols';
+import { SymbolView, CELL_W, CELL_H, textStyle, SPRITE_SCALE, AURA_TINT } from './symbols';
 import { L, REELS_W, REELS_H } from '../layout';
 import { tween, wait, ease, every, calm, motion } from '../tween';
 import { REELS, ROWS, PAYLINES, SYM } from '../../config/math';
@@ -72,12 +72,17 @@ export class Reels extends Container {
   lineLayer = new Graphics();
   labelLayer = new Container();
   stickyLayer = new Container();
+  /** ring flashes and sparkles when a Bell or Mask lands (not clipped by the reel window) */
+  popLayer = new Container();
+  /** called when a Bell or Mask drops in during a cascade (reel stops have their own sounds) */
+  onSpecialDrop: (sym: number) => void = () => {};
+  private t = 0;
   stickyViews = new Map<string, SymbolView>();
   board: Board = [];
   randomPool: number[] = [];
   constructor() {
     super();
-    this.addChild(this.body, this.maskG, this.stickyMask, this.stickyLayer, this.lineLayer, this.labelLayer);
+    this.addChild(this.body, this.maskG, this.stickyMask, this.stickyLayer, this.popLayer, this.lineLayer, this.labelLayer);
     this.maskG.rect(0, 0, REELS_W, REELS_H).fill(0xffffff);
     this.stickyMask.rect(0, 0, REELS_W, REELS_H).fill(0xffffff);
     this.body.mask = this.maskG;
@@ -94,7 +99,37 @@ export class Reels extends Container {
   /** Symbols shown while the reels blur past (from the active strips). */
   setPool(strips: number[][]) { this.randomPool = strips.flat().filter((s) => s !== SYM.MASK || Math.random() < 0.5); }
   setBoard(b: Board) { this.board = b.map((c) => c.slice()); b.forEach((col, r) => this.reels[r].setBoard(col)); }
-  update(dt: number) { for (const r of this.reels) r.update(dt); }
+  update(dt: number) {
+    this.t += dt;
+    for (const r of this.reels) r.update(dt);
+    // Bells and Masks breathe a soft aura while they are on the reels (and streaming past while spinning)
+    const a = motion.reduced ? 0.6 : 0.55 + Math.sin(this.t / 240) * 0.3;
+    const sc = motion.reduced ? 1.05 : 1.02 + Math.sin(this.t / 240) * 0.08;
+    for (const reel of this.reels) for (const v of [...reel.views, ...reel.spinViews]) if (v.special) { v.aura.alpha = a; v.aura.scale.set(sc); }
+  }
+
+  /** A Bell or Mask has just landed: it pops off the reel with a ring flash and sparkles. */
+  popSpecial(reel: number, row: number) {
+    const v = this.view(reel, row);
+    if (!v.special) return;
+    const tint = AURA_TINT[v.sym];
+    const x = cx(reel), y = cy(row);
+    const ring = new Sprite(TEX.glow);
+    ring.anchor.set(0.5); ring.position.set(x, y); ring.tint = tint; ring.blendMode = 'add'; ring.scale.set(0.5);
+    this.popLayer.addChild(ring);
+    void tween(ring, { 'scale.x': 2.3, 'scale.y': 2.3, alpha: 0 }, 600, ease.outQuad).then(() => ring.destroy());
+    if (motion.reduced) return;
+    // the symbol jumps forward, then settles
+    void tween(v, { 'scale.x': 1.32, 'scale.y': 1.32 }, 110, ease.outQuad).then(() => tween(v, { 'scale.x': 1, 'scale.y': 1 }, 320, ease.outBack));
+    for (let i = 0; i < 10; i++) {
+      const sp = new Sprite(TEX.sparkle);
+      const ang = (i / 10) * Math.PI * 2 + Math.random() * 0.4, dist = 80 + Math.random() * 40;
+      sp.anchor.set(0.5); sp.position.set(x, y); sp.tint = tint; sp.blendMode = 'add'; sp.scale.set(0.35 + Math.random() * 0.25);
+      this.popLayer.addChild(sp);
+      void tween(sp, { x: x + Math.cos(ang) * dist, y: y + Math.sin(ang) * dist, alpha: 0, rotation: 1.5 }, 520 + Math.random() * 200, ease.outQuad).then(() => sp.destroy());
+    }
+  }
+  private popReel(reel: number) { for (let row = 0; row < ROWS; row++) this.popSpecial(reel, row); }
 
   startSpin() { this.clearWins(); for (const r of this.reels) r.startSpin(); }
   /** Stops the reels one by one; onStop(reel) is called as each lands. */
@@ -103,7 +138,7 @@ export class Reels extends Container {
     for (let r = 0; r < REELS; r++) {
       const fast = opts.turbo || opts.fast();
       if (opts.anticipate !== undefined && r >= opts.anticipate && !fast) await wait(500);
-      const p = this.reels[r].stop(b[r], fast);
+      const p = this.reels[r].stop(b[r], fast).then(() => this.popReel(r));
       opts.onStop(r);
       if (r < REELS - 1) await wait(fast ? 60 : 160); else await p;
     }
@@ -131,7 +166,8 @@ export class Reels extends Container {
     for (const [x, y] of pts) this.lineLayer.lineTo(x, y);
     this.lineLayer.lineTo(REELS_W + 14, pts[4][1]);
     this.lineLayer.stroke({ width: 6, color, alpha: 0.95, join: 'round' });
-    for (let r = 0; r < REELS; r++) for (let row = 0; row < ROWS; row++) this.view(r, row).alpha = 0.45;
+    // dim everything off the line, except Bells and Masks: those stay bright so a landed bonus symbol is never lost
+    for (let r = 0; r < REELS; r++) for (let row = 0; row < ROWS; row++) { const v = this.view(r, row); if (!v.special) v.alpha = 0.45; }
     for (const [reel, row] of w.cells) {
       const v = this.view(reel, row);
       v.alpha = 1;
@@ -168,6 +204,7 @@ export class Reels extends Container {
   /** Survivors fall into the gaps; new symbols drop in from above. Sticky cells stay put. */
   async drop(next: Board, removed: Set<string>, locked: boolean[][], fast: boolean) {
     const jobs: Promise<void>[] = [];
+    const dropped: [number, number][] = [];
     for (let r = 0; r < REELS; r++) {
       const reel = this.reels[r];
       const slots = [0, 1, 2].filter((row) => !locked[r][row]);
@@ -188,10 +225,12 @@ export class Reels extends Container {
         v.set(next[r][row]);
         v.alpha = 1; v.scale.set(1); v.setGlow(false);
         v.y = fromY;
+        if (j < gone.length && v.special) dropped.push([r, row]);
         jobs.push(tween(v, { y: cy(row) }, (fast ? 160 : 300) + j * 30, calm(ease.outBounce)));
       });
     }
     await Promise.all(jobs);
+    for (const [r, row] of dropped) { this.popSpecial(r, row); this.onSpecialDrop(this.view(r, row).sym); }
     this.board = next.map((c) => c.slice());
   }
 
@@ -247,7 +286,7 @@ async function pulse(views: SymbolView[]) {
   if (motion.reduced) return;
   await every((_dt, t) => {
     const s = 1 + Math.sin(t / 90) * 0.05;
-    for (const v of views) if (!v.destroyed) v.sprite.scale.set((170 / 300) * s);
+    for (const v of views) if (!v.destroyed) v.sprite.scale.set(SPRITE_SCALE * s);
   }, 700);
-  for (const v of views) if (!v.destroyed) v.sprite.scale.set(170 / 300);
+  for (const v of views) if (!v.destroyed) v.sprite.scale.set(SPRITE_SCALE);
 }

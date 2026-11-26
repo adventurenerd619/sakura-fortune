@@ -3,7 +3,7 @@ import { TEX, RES } from '../art/textures';
 
 export const CELL_W = 190;
 export const CELL_H = 176;
-export const SYMBOL_PX = 170;
+export const SYMBOL_PX = 176;
 export const FONT = "Georgia, 'Palatino Linotype', 'Book Antiqua', serif";
 /** Real Japanese fonts for the few kanji shown (with English alongside). */
 export const JP_FONT = "'Yu Mincho', 'YuMincho', 'Hiragino Mincho ProN', 'MS Mincho', 'Noto Serif JP', serif";
@@ -39,26 +39,35 @@ export function textStyle(size: number, fill: string = '#F5EEDC', strokeW = 6) {
   };
 }
 
+/** Bonus symbols (Shrine Bell, Kitsune Mask) carry a pulsing aura so they are easy to spot. */
+export const AURA_TINT: Record<number, number> = { 11: 0xffc94a, 12: 0xb27cff };
+export const SPRITE_SCALE = SYMBOL_PX / (200 * RES);
+
 /** One symbol on the reels. */
 export class SymbolView extends Container {
+  aura = new Sprite(TEX.glow);
   glow = new Sprite(TEX.glow);
   sprite = new Sprite();
   sym = 0;
   sticky = false;
   constructor(sym = 0) {
     super();
-    this.glow.anchor.set(0.5);
+    for (const g of [this.aura, this.glow]) { g.anchor.set(0.5); g.blendMode = 'add'; }
     this.glow.visible = false;
-    this.glow.blendMode = 'add';
     this.glow.scale.set(1.25);
+    this.aura.scale.set(1.05);
     this.sprite.anchor.set(0.5);
-    this.addChild(this.glow, this.sprite);
+    this.addChild(this.aura, this.glow, this.sprite);
     this.set(sym);
   }
+  /** true for the Shrine Bell and Kitsune Mask */
+  get special() { return this.sym in AURA_TINT; }
   set(sym: number) {
     this.sym = sym;
     this.sprite.texture = TEX['sym' + sym];
-    this.sprite.scale.set(SYMBOL_PX / (200 * RES));
+    this.sprite.scale.set(SPRITE_SCALE);
+    this.aura.visible = this.special;
+    if (this.special) this.aura.tint = AURA_TINT[sym];
   }
   setGlow(on: boolean, tint = 0xffe9a8) { this.glow.visible = on; this.glow.tint = tint; }
 }

@@ -205,6 +205,8 @@ class Game {
     this.bg = new Background();
     this.reels = new Reels();
     this.reels.setPool(STRIPS);
+    // a Bell or Mask that drops in during a cascade gets the same sound as one landing on a reel stop
+    this.reels.onSpecialDrop = (sym) => (sym === SYM.BELL ? this.audio.scatterLand(1) : this.audio.maskLand());
     this.reels.setBoard(Array.from({ length: REELS }, (_, r) => [0, 1, 2].map((i) => STRIPS[r][(i * 7 + r * 3) % STRIPS[r].length])));
     this.frame = new Sprite(TEX.frame);
     this.reelLayer.addChild(this.frame, this.reels);
