@@ -32,6 +32,8 @@ import { makeGameRng } from '../engine/rng';
 /** Money is kept to a millionth of a dollar (pays can be fractions of a cent); it is rounded only for display. */
 const r2 = (x: number) => Math.round(x * 1e6) / 1e6;
 const AUTO_OPTIONS: (number | 'feature')[] = [10, 25, 50, 100, 'feature'];
+/** Bonus presentations (free spins, Torii Path, Omikuji) play at this share of normal speed so they last a little longer. Turbo and fast-forward ignore it. */
+const BONUS_PACE = 0.75;
 /** Auto-spin stop limits, in x bet (0 = off). */
 const AUTO_STOP_WIN = [0, 10, 25, 50, 100];
 const AUTO_STOP_LOSS = [0, 25, 50, 100, 250];
@@ -605,6 +607,11 @@ class Game {
     if (this.autoLeft > 0) { this.stopAuto(); return; }
     void this.spin();
   }
+  /** Slows the animation clock for a bonus presentation (unless turbo or fast-forward is on). */
+  bonusPace(on: boolean) {
+    if (this.fast) return;
+    clock.speed = on && !this.turbo ? BONUS_PACE : 1;
+  }
   fastForward() {
     if (!this.busy || this.fast) return;
     this.fast = true;
@@ -809,6 +816,7 @@ class Game {
 
   // ======================= Lantern Festival =======================
   async playFreeSpins(fs: FreeSpinsResult, bet: number, bought: boolean) {
+    this.bonusPace(true);
     this.inFeature = true;
     if (this.autoUntilFeature) this.stopAuto();
     this.audio.featureStart();
@@ -864,10 +872,12 @@ class Game {
     void this.bg.show('dusk');
     this.audio.playMusic('base');
     this.inFeature = false;
+    this.bonusPace(false);
   }
 
   // ======================= Torii Path =======================
   async playTorii(t: ToriiResult, bet: number, bought: boolean) {
+    this.bonusPace(true);
     this.inFeature = true;
     if (this.autoUntilFeature) this.stopAuto();
     this.audio.featureStart();
@@ -906,10 +916,12 @@ Maximum win reached: ${fmt(t.win * bet)} paid`;
     void this.bg.show('dusk');
     this.audio.playMusic('base');
     this.inFeature = false;
+    this.bonusPace(false);
   }
 
   // ======================= Omikuji =======================
   async playOmikuji(o: OmikujiResult, bet: number) {
+    this.bonusPace(true);
     const box = this.omikujiBox;
     box.visible = true;
     box.alpha = 0;
@@ -928,6 +940,7 @@ Maximum win reached: ${fmt(t.win * bet)} paid`;
     }
     await this.countUp(o.pay * bet, 900);
     await tween(box, { alpha: 0 }, 300);
+    this.bonusPace(false);
     box.visible = false;
   }
   async showSlip(key: SlipKey, bet: number, kyoFirst: boolean) {
