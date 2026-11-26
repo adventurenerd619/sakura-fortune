@@ -79,7 +79,7 @@ function portrait(h: number): Layout {
     mascot: { x: 30, y: top + Math.max(0, (reelY - 60 - top - 520 * ms) / 2), s: ms },
     bg: { s: h / 1080, x: 540 - 960 * (h / 1080), y: 0 },
     omikuji: { x: 860, y: reelY - 70, s: 0.8 },
-    lanterns: { x: 560, y: top + 60, dx: 88 },
+    lanterns: { x: 700, y: 600, dx: 110 },
     path: alongPolyline(pts, 25),
     pathScale: 0.85,
   };

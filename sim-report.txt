@@ -2,35 +2,35 @@
 Spins: 10,000,000  buys: 1,000,000 each  seed 2026
 Strip lengths: base 79, 75, 86, 76, 78 | free spins 68, 72, 72, 71, 71
 
-TOTAL RTP:              96.43%   (std dev per spin 9.66x, ±0.60% at 95%)
-  Base game + cascades: 38.25%
+TOTAL RTP:              96.00%   (std dev per spin 9.65x, ±0.60% at 95%)
+  Base game + cascades: 37.86%
   Omikuji Fortune Draw: 5.54%
   Torii Path:           23.93%
-  Free Spins:           28.71%  (of which Bell scatter pays 0.77%)
+  Free Spins:           28.67%  (of which Bell scatter pays 0.77%)
 Hit rate:               27.85%  (1 in 3.59)
 Cascading spins:        26.36% of spins win; 0.195 extra cascades per winning spin
-Free Spins trigger:     1 in 278.9  (3/4/5 Bells: 34367 / 1453 / 32; avg 80.08x; 0.50 lantern retriggers each)
-Torii Path trigger:     1 in 243.5  (avg 58.27x; summit 3.40% of climbs)
-Both on one spin:       73
-Omikuji draw:           1 in 102.5  (avg 5.68x)  slips: Daikichi 2334, Chukichi 11537, Shokichi 32203, Kichi 51445, Kyo 14677
+Free Spins trigger:     1 in 279.4  (3/4/5 Bells: 34305 / 1453 / 32; avg 80.11x; 0.50 lantern retriggers each)
+Torii Path trigger:     1 in 243.5  (avg 58.26x; summit 3.40% of climbs)
+Both on one spin:       72
+Omikuji draw:           1 in 102.5  (avg 5.68x)  slips: Daikichi 2334, Chukichi 11537, Shokichi 32204, Kichi 51457, Kyo 14681
 Biggest win:            1133.30x  (free spins 483.30x (20 spins, mult x3) + Torii 650.00x (summit))
 Spins hitting the 5,000x cap: 0
 Win distribution (x bet):
   none         72.15%   1 in 1.4
   <1x          13.45%   1 in 7.4
-  1-5x         11.94%   1 in 8.4
-  5-10x         1.30%   1 in 77.2
-  10-25x        0.55%   1 in 182.4
-  25-50x        0.28%   1 in 358.7
-  50-250x       0.30%   1 in 329.4
-  250-1000x     0.03%   1 in 3100.8
+  1-5x         11.99%   1 in 8.3
+  5-10x         1.27%   1 in 78.5
+  10-25x        0.53%   1 in 188.5
+  25-50x        0.28%   1 in 360.4
+  50-250x       0.30%   1 in 329.8
+  250-1000x     0.03%   1 in 3098.9
   1000x+        0.00%   1 in 10000000.0
 
-BONUS BUY TORII PATH (60x bet): RTP 96.46%  (±0.26%)
-  avg win 57.87x, std dev 80.78x, biggest 975.00x, summit 3.24%
+BONUS BUY TORII PATH (60x bet): RTP 96.45%  (±0.26%)
+  avg win 57.87x, std dev 80.77x, biggest 975.00x, summit 3.24%
 
-BONUS BUY FREE SPINS (80x bet): RTP 96.07%  (±0.20%)
-  avg win 76.86x, std dev 80.89x, biggest 1380.50x
+BONUS BUY FREE SPINS (80x bet): RTP 96.08%  (±0.20%)
+  avg win 76.87x, std dev 80.75x, biggest 1449.25x
 
 PASS  Total RTP 95.5-96.5%
 PASS  Torii Path buy RTP 95.5-96.5%
@@ -39,4 +39,4 @@ PASS  Hit rate 25-30%
 PASS  Free Spins about 1 in 280 (240-330)
 PASS  Torii Path about 1 in 240 (200-280)
 PASS  Max win within 5000x
-(759.7s)
+(895.2s)

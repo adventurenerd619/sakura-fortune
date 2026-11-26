@@ -29,6 +29,7 @@ class Reel extends Container {
       const v = new SymbolView(randomSym());
       v.visible = false;
       v.alpha = 0.9;
+      v.x = CELL_W / 2;
       this.spinViews.push(v);
       this.addChild(v);
     }
@@ -67,6 +68,7 @@ export class Reels extends Container {
   reels: Reel[] = [];
   body = new Container();
   maskG = new Graphics();
+  stickyMask = new Graphics();
   lineLayer = new Graphics();
   labelLayer = new Container();
   stickyLayer = new Container();
@@ -75,9 +77,11 @@ export class Reels extends Container {
   randomPool: number[] = [];
   constructor() {
     super();
-    this.addChild(this.body, this.maskG, this.stickyLayer, this.lineLayer, this.labelLayer);
+    this.addChild(this.body, this.maskG, this.stickyMask, this.stickyLayer, this.lineLayer, this.labelLayer);
     this.maskG.rect(0, 0, REELS_W, REELS_H).fill(0xffffff);
+    this.stickyMask.rect(0, 0, REELS_W, REELS_H).fill(0xffffff);
     this.body.mask = this.maskG;
+    this.stickyLayer.mask = this.stickyMask;
     for (let r = 0; r < REELS; r++) {
       const reel = new Reel(r, () => this.randomPool[Math.floor(Math.random() * this.randomPool.length)] ?? 5);
       reel.x = r * CELL_W;

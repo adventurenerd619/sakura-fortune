@@ -1,5 +1,5 @@
 SAKURA FORTUNE - SteamOS / Steam Deck
-================================
+=====================================
 
 Install (Desktop Mode)
   1. Copy "Sakura Fortune-<version>-linux-x64.tar.gz" to the Deck (for example into Downloads).
@@ -19,7 +19,7 @@ Library artwork
   (art/hero.png) / Set custom logo (art/logo.png). The files are in ~/Applications/SakuraFortune/art/.
 
 Controls (Steam Deck)
-  A ........ Spin / skip / fast-forward the feature
+  A ........ Spin / skip / fast-forward; roll on the Torii Path; draw an Omikuji slip
   B ........ Back / close panel
   X ........ Auto-spin
   Y ........ Bonus buy
