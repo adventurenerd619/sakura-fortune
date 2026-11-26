@@ -21,6 +21,10 @@ export const ease = {
 interface Job { update(dtMs: number): boolean }
 const jobs: Job[] = [];
 export const clock = { speed: 1, now: 0 };
+/** Reduced motion: bounces and pops become plain eases. */
+export const motion = { reduced: false };
+/** The given ease, or a plain one when reduced motion is on. */
+export const calm = (e: Ease): Ease => (motion.reduced ? ease.outQuad : e);
 
 export function initTweens(ticker: Ticker) {
   ticker.add((t) => {

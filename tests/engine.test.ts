@@ -442,6 +442,14 @@ test('debug forcing: each feature, 4 and 5 Bells, a summit climb and a lantern r
   assert.ok(playSpin(rng, 1, { feature: 'torii', summit: true }).torii!.summit);
   assert.ok(playSpin(rng, 1, { feature: 'freespins', retrigger: true }).freeSpins!.retriggers > 0);
   assert.ok(playBonusBuy(rng, 1, 'torii', { summit: true }).torii!.summit);
+  // forced Bell triggers are built from real stops, not searched for blindly: fast even for 5 Bells
+  const t0 = Date.now();
+  for (let i = 0; i < 20; i++) {
+    const r = playSpin(rng, 1, { feature: 'freespins', bells: 5 });
+    assert.equal(r.freeSpins!.bells, 5);
+    assert.equal(countSym(r.base!.finalBoard, BELL), 5);
+  }
+  assert.ok(Date.now() - t0 < 3000, `20 forced 5-Bell spins took ${Date.now() - t0}ms`);
   const forced = playSpin(rng, 1, { feature: 'torii' });
   assert.equal(forced.forced, true);
   assert.equal(playSpin(rng, 1).forced, false);

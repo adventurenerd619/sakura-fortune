@@ -1,7 +1,7 @@
 import { h, makeModal, svgUrl } from './dom';
 import { SYMBOL_SVGS } from '../art/svg';
 import { PAYTABLE, SYMBOL_NAMES, SYM, PAYLINES, OMIKUJI_SLIPS, TORII, FREE_SPINS, BONUS_BUY, MAX_WIN_X, WIN_TIERS, CASCADE_MULTS } from '../../config/math';
-import { fmt } from '../scene/symbols';
+import { fmt, fmtExact } from '../scene/symbols';
 
 const TABS = ['Paytable', 'Paylines', 'Features', 'Rules'];
 
@@ -29,14 +29,14 @@ export class Paytable {
     const c = this.content;
     c.innerHTML = '';
     const bet = this.bet();
-    const pay = (x: number) => `${fmt(x * bet)}`;
+    const pay = (x: number) => fmtExact(x * bet);
     if (this.tab === 0) {
       const card = (s: number) => h('div', { class: 'pt-card' },
         h('img', { src: this.imgs[s], alt: SYMBOL_NAMES[s] }),
         h('div', { class: 'pt-name' }, SYMBOL_NAMES[s]),
-        h('div', { class: 'pt-pays' }, ...[5, 4, 3].map((n) => h('div', {}, h('b', {}, `${n}×`), ' ', pay(PAYTABLE[s][n - 3])))));
+        h('div', { class: 'pt-pays' }, ...[5, 4, 3].map((n) => h('div', {}, h('b', {}, `${n}×`), ' ', pay(PAYTABLE[s][n - 3]), ' ', h('span', { class: 'mult' }, `${PAYTABLE[s][n - 3]}× bet`)))));
       c.append(
-        h('p', { class: 'note' }, `Pays at your current bet (${fmt(bet)}). Line wins pay left to right from reel 1, 3 or more in a row on any of the 25 lines. Pays are multiples of the total bet; the highest win on each line counts.`),
+        h('p', { class: 'note' }, `Pays at your current bet (${fmt(bet)}), with the multiple of the bet beside each. Line wins pay left to right from reel 1, 3 or more in a row on any of the 25 lines. Pays are multiples of the total bet; the highest win on each line counts.`),
         h('div', { class: 'pt-grid' }, ...[SYM.KOI, SYM.TORII, SYM.FAN, SYM.KABUTO, SYM.LANTERN].map(card)),
         h('div', { class: 'pt-grid' }, ...[SYM.MOCHI, SYM.TEACUP, SYM.CRANE, SYM.BAMBOO, SYM.MON].map(card)),
         h('div', { class: 'pt-grid specials' },

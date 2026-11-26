@@ -1,7 +1,7 @@
 import { Container, Graphics, Sprite, Text } from 'pixi.js';
 import { SymbolView, CELL_W, CELL_H, textStyle } from './symbols';
 import { L, REELS_W, REELS_H } from '../layout';
-import { tween, wait, ease, every } from '../tween';
+import { tween, wait, ease, every, calm, motion } from '../tween';
 import { REELS, ROWS, PAYLINES, SYM } from '../../config/math';
 import type { Board, Cell, LineWin } from '../../engine/game';
 import { TEX } from '../art/textures';
@@ -59,8 +59,8 @@ class Reel extends Container {
     this.spinning = false;
     for (const v of this.spinViews) v.visible = false;
     this.setBoard(col);
-    for (const v of this.views) v.y -= 46;
-    await Promise.all(this.views.map((v, r) => tween(v, { y: cy(r) }, fast ? 120 : 220, ease.outBack)));
+    for (const v of this.views) v.y -= motion.reduced ? 0 : 46;
+    await Promise.all(this.views.map((v, r) => tween(v, { y: cy(r) }, fast ? 120 : 220, calm(ease.outBack))));
   }
 }
 
@@ -188,7 +188,7 @@ export class Reels extends Container {
         v.set(next[r][row]);
         v.alpha = 1; v.scale.set(1); v.setGlow(false);
         v.y = fromY;
-        jobs.push(tween(v, { y: cy(row) }, (fast ? 160 : 300) + j * 30, ease.outBounce));
+        jobs.push(tween(v, { y: cy(row) }, (fast ? 160 : 300) + j * 30, calm(ease.outBounce)));
       });
     }
     await Promise.all(jobs);
@@ -220,8 +220,10 @@ export class Reels extends Container {
     for (let r = 0; r < REELS; r++) for (let row = 0; row < ROWS; row++) {
       if (locked[r][row] && !this.stickyViews.has(`${r},${row}`)) {
         const v = this.addSticky(r, row);
-        v.scale.set(1.4);
-        jobs.push(tween(v, { 'scale.x': 1, 'scale.y': 1 }, 260, ease.outBack));
+        if (!motion.reduced) {
+          v.scale.set(1.4);
+          jobs.push(tween(v, { 'scale.x': 1, 'scale.y': 1 }, 260, ease.outBack));
+        }
       }
     }
     await Promise.all(jobs);
@@ -242,6 +244,7 @@ export class Reels extends Container {
 
 /** Gentle pulse on winning symbols. */
 async function pulse(views: SymbolView[]) {
+  if (motion.reduced) return;
   await every((_dt, t) => {
     const s = 1 + Math.sin(t / 90) * 0.05;
     for (const v of views) if (!v.destroyed) v.sprite.scale.set((170 / 300) * s);

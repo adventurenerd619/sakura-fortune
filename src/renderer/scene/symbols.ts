@@ -21,7 +21,13 @@ export const fmt = (x: number) => {
   const c = toCredits(x);
   return num(c, Number.isInteger(c) ? 0 : 2);
 };
-export const denomLabel = (d: number) => (d < 1 ? `${Math.round(d * 100)}¢` : `$${d}`);
+/** Like fmt, but keeps a third decimal for dollar amounts between whole cents (e.g. $0.125 on the paytable). */
+export const fmtExact = (x: number) => {
+  if (money.mode !== 'dollars') return fmt(x);
+  const tenths = Math.round(x * 1000);
+  return tenths % 10 === 0 ? fmt(x) : '$' + num(tenths / 1000, 3);
+};
+export const denomLabel =(d: number) => (d < 1 ? `${Math.round(d * 100)}¢` : `$${d}`);
 
 export function textStyle(size: number, fill: string = '#F5EEDC', strokeW = 6) {
   return {

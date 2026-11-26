@@ -9,7 +9,7 @@
  */
 import {
   SYM, PAYTABLE, PAYLINES, REELS, ROWS, BASE_COUNTS, FS_COUNTS, STRIP_SEED, SPECIAL_GAP, CASCADE_MULTS,
-  OMIKUJI_CHANCE, OMIKUJI_SLIPS, TORII, FREE_SPINS, BONUS_BUY, MAX_WIN_X, NUM_SYMBOLS,
+  OMIKUJI_CHANCE, OMIKUJI_SLIPS, TORII, FREE_SPINS, BONUS_BUY, MAX_WIN_X,
   type Sym, type SlipKey, type ToriiSpaceType,
 } from '../config/math';
 import { makeRng, pickWeighted, type Rng } from './rng';
@@ -453,10 +453,30 @@ export function baseTriggers(base: CascadeResult) {
   return { fs: bells >= 3 ? bells : 0, torii };
 }
 
+/**
+ * Debug: reel stops that show a Shrine Bell on exactly `bells` randomly chosen reels and none on the others.
+ * They are real strip positions, so the board is one the game can really produce; cascades may still drop
+ * extra Bells, which the caller checks.
+ */
+function bellStops(rng: Rng, bells: number): number[] {
+  const reels = [0, 1, 2, 3, 4].sort(() => rng() - 0.5).slice(0, bells);
+  return STRIPS.map((strip, r) => {
+    const want = reels.includes(r);
+    const ok: number[] = [];
+    for (let s = 0; s < strip.length; s++) {
+      const has = [0, 1, 2].some((k) => strip[(s + k) % strip.length] === SYM.BELL);
+      if (has === want) ok.push(s);
+    }
+    return ok[Math.floor(rng() * ok.length)];
+  });
+}
+
 /** One paid base-game spin. `force` (debug) re-rolls until the requested event happens. */
 export function playSpin(rng: Rng, bet: number, force?: ForceOptions | null): SpinResult {
+  const wantBells = force?.feature === 'freespins' ? (force.bells ?? 3) : 0;
   for (let tries = 0; ; tries++) {
-    const base = runCascades(rng, STRIPS, null, false);
+    // forced free spins start from stops that already show the Bells (searching blind for 5 could take seconds)
+    const base = runCascades(rng, STRIPS, null, false, wantBells ? bellStops(rng, wantBells) : undefined);
     const trig = baseTriggers(base);
     const noWin = base.win === 0 && !trig.fs && !trig.torii;
     const omikuji = noWin && (force?.feature === 'omikuji' || rng() < OMIKUJI_CHANCE);
@@ -484,4 +504,3 @@ export function playBonusBuy(rng: Rng, bet: number, kind: FeatureKind, force?: F
 export function stripText(strips = STRIPS) {
   return strips.map((s, i) => `Reel ${i + 1} (${s.length}): ` + s.map((x) => ['KO', 'TO', 'FA', 'KA', 'LA', 'MO', 'TE', 'CR', 'BA', 'MN', 'WD', 'BL', 'MK'][x]).join(' ')).join('\n');
 }
-void NUM_SYMBOLS;

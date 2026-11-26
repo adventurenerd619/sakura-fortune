@@ -2,9 +2,9 @@ import 'pixi.js/unsafe-eval';
 import { Application, Container, Sprite, Text } from 'pixi.js';
 import { loadTextures, TEX } from './art/textures';
 import { Audio } from './audio';
-import { initTweens, wait, clock, tween, ease, every, Skipper } from './tween';
+import { initTweens, wait, clock, tween, every, Skipper, motion } from './tween';
 import { loadSave, writeSave, loadStatus, type SaveData } from './save';
-import { newStats, recordResult, type StatsBlock } from './stats';
+import { newStats, recordResult } from './stats';
 import { Background } from './scene/background';
 import { Reels } from './scene/reels';
 import { L, setLayout, preferredOrientation, portraitHeight, type Orientation } from './layout';
@@ -12,7 +12,7 @@ import { Mascot } from './scene/mascot';
 import { Effects } from './scene/effects';
 import { Overlays } from './scene/overlays';
 import { ToriiPath } from './scene/toriiPath';
-import { fmt, money, denomLabel, textStyle, CELL_W, CELL_H } from './scene/symbols';
+import { fmt, fmtExact, money, denomLabel, textStyle, CELL_W, CELL_H } from './scene/symbols';
 import { buildHud, type Hud } from './ui/hud';
 import { StatsBook } from './ui/statsBook';
 import { Paytable } from './ui/paytable';
@@ -114,6 +114,8 @@ class Game {
     this.buildDebug();
     this.overlays.onDim = (on) => ui.classList.toggle('dimmed', on);
     this.applyMotion();
+    // 'Follow system' reacts when the system setting changes while the game is open
+    window.matchMedia?.('(prefers-reduced-motion: reduce)').addEventListener?.('change', () => this.applyMotion());
     this.refreshAll();
 
     this.app.ticker.add((t) => this.tick(t.deltaMS));
@@ -242,6 +244,7 @@ class Game {
   }
   applyMotion() {
     const rm = !!this.reducedMotion;
+    motion.reduced = rm;
     this.bg.reducedMotion = rm;
     this.fx.reducedMotion = rm;
     this.mascot.calm = rm;
@@ -311,8 +314,11 @@ class Game {
       const t = e.target as HTMLElement;
       if (!t.closest('.popmenu') && t !== u.autoBtn && t !== u.btnDenom) this.hideMenus();
     });
-    // Torii Path and Omikuji: tapping the stage counts as the prompt press
-    this.app.canvas.addEventListener('pointerdown', () => { if (this.waiter && (this.torii.visible || this.omikujiBox.visible)) this.waiter(); });
+    // tapping the stage answers any prompt (banners, Torii Path rolls, Omikuji) and skips a big-win count-up
+    this.app.canvas.addEventListener('pointerdown', () => {
+      if (this.waiter) this.waiter();
+      else if (this.skipper && !this.skipper.skipped) this.skipper.skip();
+    });
     u.slip.addEventListener('pointerdown', () => this.waiter?.());
     // keyboard
     window.addEventListener('keydown', (e) => {
@@ -735,8 +741,8 @@ class Game {
       for (let k = 0; k < st.wins.length; k++) {
         const w = st.wins[k];
         const amount = r2(w.pay * mult * o.bet * 1e4) / 1e4;
-        this.reels.showLine(w, fmt(amount));
-        this.setMessage(`Line ${w.line + 1}: ${w.count} × ${SYMBOL_NAMES[w.sym]}${mult > 1 ? ` · ×${mult}` : ''} · ${fmt(amount)}`);
+        this.reels.showLine(w, fmtExact(amount));
+        this.setMessage(`Line ${w.line + 1}: ${w.count} × ${SYMBOL_NAMES[w.sym]}${mult > 1 ? ` · ×${mult}` : ''} · ${fmtExact(amount)}`);
         this.audio.lineTick(k);
         await this.countUp(amount, per * 0.8);
         await wait(per * 0.2);
@@ -957,5 +963,3 @@ class Game {
 const game = new Game();
 (window as any).game = game;
 void game.boot();
-void ease; void newStats;
-export type { StatsBlock };

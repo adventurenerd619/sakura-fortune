@@ -107,8 +107,9 @@ app.whenReady().then(async () => {
     await waitFor('!!game.waiter && game.inFeature', 30000);
     await sleep(600);
     await shot('09-torii-intro');
-    await js('game.waiter()');
-    await waitFor('game.torii.visible && !!game.waiter', 15000);
+    // a tap anywhere on the stage answers the banner prompt
+    await js("game.app.canvas.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); 0");
+    check('tapping the stage continues the Torii Path banner', await waitFor('game.torii.visible && !!game.waiter', 15000));
     await sleep(500);
     await shot('10-torii-board');
     const rolls = await js('game.lastResult.torii.rolls.length');

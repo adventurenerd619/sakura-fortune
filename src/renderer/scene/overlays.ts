@@ -2,7 +2,7 @@ import { Container, Graphics, Sprite, Text } from 'pixi.js';
 import { TEX } from '../art/textures';
 import { textStyle, fmt } from './symbols';
 import { L } from '../layout';
-import { tween, ease, every, Skipper } from '../tween';
+import { tween, ease, every, Skipper, motion } from '../tween';
 import type { Effects } from './effects';
 
 /** Full-screen moments: big-win celebrations and feature banners. */
@@ -33,12 +33,12 @@ export class Overlays extends Container {
     p.anchor.set(0.5, 0); p.y = s.y + s.height + 34;
     g.addChild(glow, t, s, p);
     g.position.set(L.cx, L.cy - 40);
-    g.scale.set(0.6); g.alpha = 0;
+    g.scale.set(motion.reduced ? 1 : 0.6); g.alpha = 0;
     this.layer.addChild(g);
     void tween(g, { 'scale.x': 1, 'scale.y': 1, alpha: 1 }, 380, ease.outBack);
     let done = false;
     void until.then(() => { done = true; });
-    void every((_dt, el) => { p.alpha = 0.55 + Math.sin(el / 260) * 0.45; return !done && !g.destroyed; });
+    if (!motion.reduced) void every((_dt, el) => { p.alpha = 0.55 + Math.sin(el / 260) * 0.45; return !done && !g.destroyed; });
     this.fx.sparkles(L.cx, L.cy - 40, 24, 700);
     await until;
     await tween(g, { alpha: 0 }, 220);
@@ -71,12 +71,14 @@ export class Overlays extends Container {
       if (ti !== shownTier && ti >= 0) {
         shownTier = ti;
         name.text = reached[ti].name.toUpperCase();
-        name.scale.set(1.5);
-        void tween(name, { 'scale.x': 1, 'scale.y': 1 }, 320, ease.outBack);
+        if (!motion.reduced) {
+          name.scale.set(1.5);
+          void tween(name, { 'scale.x': 1, 'scale.y': 1 }, 320, ease.outBack);
+        }
         onTier(reached[ti].name);
         this.fx.sparkles(L.cx, L.cy, 30, 900);
       }
-      if (Math.random() < 0.3) this.fx.petalBurst(L.cx + (Math.random() - 0.5) * 900, L.cy + (Math.random() - 0.5) * 400, 3);
+      if (!motion.reduced && Math.random() < 0.3) this.fx.petalBurst(L.cx + (Math.random() - 0.5) * 900, L.cy + (Math.random() - 0.5) * 400, 3);
       return p < 1;
     });
     await skip.wait(1600);

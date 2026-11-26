@@ -128,6 +128,7 @@ html, body { margin: 0; height: 100%; background: #0d1222; overflow: hidden; use
 .pt-card.wide { width: 420px; }
 .pt-name { font-weight: bold; color: var(--red-d); }
 .pt-pays div { font-size: 22px; }
+.pt-pays .mult { font-size: 16px; color: #7a7080; }
 .pt-text { font-size: 19px; line-height: 1.35; }
 .pl-grid { display: grid; grid-template-columns: repeat(9, 1fr); gap: 10px; }
 .pl { text-align: center; }
