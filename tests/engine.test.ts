@@ -10,7 +10,7 @@ import {
 } from '../src/config/math';
 import {
   evalLines, runCascades, drawOmikuji, playTorii, makeToriiLayout, playFreeSpins, playSpin, playBonusBuy,
-  STRIPS, FS_STRIPS, countSym, type Board, type ToriiSpace,
+  STRIPS, FS_STRIPS, countSym, capTorii, type Board, type ToriiSpace,
 } from '../src/engine/game';
 import { makeRng } from '../src/engine/rng';
 
@@ -453,6 +453,17 @@ test('debug forcing: each feature, 4 and 5 Bells, a summit climb and a lantern r
   const forced = playSpin(rng, 1, { feature: 'torii' });
   assert.equal(forced.forced, true);
   assert.equal(playSpin(rng, 1).forced, false);
+});
+
+test('a Torii Path cut short by the cap keeps its uncapped total for the presentation', () => {
+  const t = playTorii(makeRng(1), mistPath(), [5, 5, 5]);
+  assert.equal(t.win, 35);
+  assert.equal(capTorii(t, 100), false);
+  assert.equal(t.capped, undefined);
+  assert.equal(capTorii(t, 20), true);
+  assert.equal(t.win, 20);
+  assert.equal(t.uncappedWin, 35);
+  assert.equal(t.capped, true);
 });
 
 test('max win is capped at 5,000x bet', () => {

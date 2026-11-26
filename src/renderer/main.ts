@@ -32,6 +32,9 @@ import { makeGameRng } from '../engine/rng';
 /** Money is kept to a millionth of a dollar (pays can be fractions of a cent); it is rounded only for display. */
 const r2 = (x: number) => Math.round(x * 1e6) / 1e6;
 const AUTO_OPTIONS: (number | 'feature')[] = [10, 25, 50, 100, 'feature'];
+/** Auto-spin stop limits, in x bet (0 = off). */
+const AUTO_STOP_WIN = [0, 10, 25, 50, 100];
+const AUTO_STOP_LOSS = [0, 25, 50, 100, 250];
 
 class Game {
   app!: Application;
@@ -61,6 +64,8 @@ class Game {
   inFeature = false;
   autoLeft = 0;
   autoUntilFeature = false;
+  /** balance when auto-spin started (for the loss limit) */
+  autoStartBalance = 0;
   force: ForceOptions | null = null;
   forceBuy: FeatureKind | null = null;
   /** Part of the current result already credited to the saved balance but not yet revealed. */
@@ -114,6 +119,8 @@ class Game {
     this.buildDebug();
     this.overlays.onDim = (on) => ui.classList.toggle('dimmed', on);
     this.applyMotion();
+    // the base track is set now; it is heard once the first tap or key press unlocks audio (features switch tracks the same way)
+    this.audio.playMusic('base');
     // 'Follow system' reacts when the system setting changes while the game is open
     window.matchMedia?.('(prefers-reduced-motion: reduce)').addEventListener?.('change', () => this.applyMotion());
     this.refreshAll();
@@ -140,7 +147,6 @@ class Game {
     const startAudio = () => {
       this.audio.resume();
       this.audioStarted = true;
-      this.audio.playMusic(this.inFeature ? null : 'base');
       window.removeEventListener('pointerdown', startAudio);
       window.removeEventListener('keydown', startAudio);
     };
@@ -300,11 +306,22 @@ class Game {
     click(u.confirmYes, () => { const a = this.confirmAction; this.confirmAction = null; u.confirm.close(); a?.(); });
     click(u.confirmNo, () => { this.confirmAction = null; u.confirm.close(); });
     // auto + denom menus
+    // stop limits (remembered), below the spin-count options
+    const limit = (label: string, key: 'autoStopWin' | 'autoStopLoss', opts: number[], name: (x: number) => string) => {
+      const sel = h('select', { class: 'auto-limit', 'aria-label': label }, ...opts.map((x) => h('option', { value: String(x) }, x ? name(x) : 'Off'))) as HTMLSelectElement;
+      sel.value = String(this.save.settings[key]);
+      sel.addEventListener('change', () => { this.save.settings[key] = Number(sel.value); writeSave(this.save); });
+      return h('label', { class: 'auto-limit-row' }, label, sel);
+    };
+    const limits = h('div', { class: 'auto-limits' },
+      limit('Stop on a win of', 'autoStopWin', AUTO_STOP_WIN, (x) => `${x}× bet`),
+      limit('Stop if balance drops by', 'autoStopLoss', AUTO_STOP_LOSS, (x) => `${x}× bet`));
     for (const opt of AUTO_OPTIONS) {
       const b = h('button', { class: 'btn' }, opt === 'feature' ? 'Until feature' : `${opt} spins`) as HTMLButtonElement;
       click(b, () => { this.hideMenus(); this.startAuto(opt); });
       u.autoMenu.append(b);
     }
+    u.autoMenu.append(limits);
     DENOMINATIONS.forEach((d, i) => {
       const b = h('button', { class: 'btn' }, denomLabel(d)) as HTMLButtonElement;
       click(b, () => { this.hideMenus(); this.setDenom(i); });
@@ -380,13 +397,37 @@ class Game {
   }
   onPad(b: number) {
     this.audio.resume();
-    if (!this.audioStarted) { this.audioStarted = true; this.audio.playMusic(this.inFeature ? null : 'base'); }
+    this.audioStarted = true;
     const targets = this.padTargets();
     if (targets.length) {
       const i = Math.max(0, targets.indexOf(this.padCursor as HTMLElement));
+      const cur = this.padCursor && targets.includes(this.padCursor) ? this.padCursor : null;
+      // a highlighted slider is adjusted with left / right
+      if (cur instanceof HTMLInputElement && cur.type === 'range' && (b === PAD.LEFT || b === PAD.RIGHT)) {
+        cur.value = String(Math.max(0, Math.min(1, Number(cur.value) + (b === PAD.RIGHT ? 0.05 : -0.05))));
+        cur.dispatchEvent(new Event('input'));
+        return;
+      }
+      // Stats and Rules: LB / RB change page, LT / RT switch this session / all time
+      const book = this.book.modal.isOpen() ? this.book : this.paytable.modal.isOpen() ? this.paytable : null;
+      if (book && (b === PAD.LB || b === PAD.RB)) {
+        const n = book.tabs.length;
+        book.tab = (book.tab + (b === PAD.RB ? 1 : -1) + n) % n;
+        book.render();
+        this.setPadCursor(book.tabs[book.tab]);
+        this.audio.click();
+        return;
+      }
+      if (book === this.book && (b === PAD.LT || b === PAD.RT)) { this.book.modeBtn.click(); return; }
       if (b === PAD.UP || b === PAD.LEFT) this.setPadCursor(targets[(i - 1 + targets.length) % targets.length]);
       else if (b === PAD.DOWN || b === PAD.RIGHT) this.setPadCursor(targets[(i + 1) % targets.length]);
-      else if (b === PAD.A) { const el = this.padCursor && targets.includes(this.padCursor) ? this.padCursor : targets[0]; if (el instanceof HTMLInputElement && el.type === 'checkbox') { el.checked = !el.checked; el.dispatchEvent(new Event('change')); } else el.click(); }
+      else if (b === PAD.A) {
+        const el = cur ?? targets[0];
+        if (el instanceof HTMLInputElement && el.type === 'checkbox') { el.checked = !el.checked; el.dispatchEvent(new Event('change')); }
+        else if (el instanceof HTMLInputElement && el.type === 'text') el.focus(); // opens the on-screen keyboard on devices
+        else if (el instanceof HTMLSelectElement) { el.selectedIndex = (el.selectedIndex + 1) % el.options.length; el.dispatchEvent(new Event('change')); }
+        else if (!(el instanceof HTMLInputElement)) el.click();
+      }
       else if (b === PAD.B) { if (!this.closeTopModal()) this.hideMenus(); this.setPadCursor(null); }
       return;
     }
@@ -548,6 +589,7 @@ class Game {
   startAuto(opt: number | 'feature') {
     this.autoUntilFeature = opt === 'feature';
     this.autoLeft = opt === 'feature' ? Infinity : opt;
+    this.autoStartBalance = this.save.balance;
     this.refreshAll();
     if (!this.busy) void this.spin();
   }
@@ -845,7 +887,11 @@ class Game {
       this.audio.dieRoll();
       await this.torii.playRoll(r, this.quick, { hop: () => this.audio.hop(), gate: () => this.audio.gate(), land: (e) => this.audio.land(e), summit: () => this.audio.summit() });
     }
-    const sub = t.mult > 1 ? `Collected ${fmt(t.collected * bet)} × lantern ${t.mult} = ${fmt(t.win * bet)}` : `Collected ${fmt(t.win * bet)}`;
+    const full = t.uncappedWin ?? t.win;
+    let sub = t.mult > 1 ? `Collected ${fmt(t.collected * bet)} × lantern ${t.mult} = ${fmt(full * bet)}` : `Collected ${fmt(full * bet)}`;
+    // the 5,000x cap can cut a climb short: say so rather than show two different totals
+    if (t.capped) sub += `
+Maximum win reached: ${fmt(t.win * bet)} paid`;
     const outro = this.waitForPress('Press SPIN to continue', 2500, 'OK');
     const cu = this.countUp(t.win * bet, 1200);
     await this.overlays.banner(t.summit ? 'SHRINE REACHED!' : 'CLIMB COMPLETE', sub, outro, 'Tap or press SPIN to continue');
@@ -919,6 +965,9 @@ class Game {
     this.pendingLayout = null;
     if (this.autoLeft > 0) {
       if (this.autoUntilFeature && (res.freeSpins || res.torii)) { this.stopAuto(); return; }
+      const s = this.save.settings;
+      if (s.autoStopWin && !res.bought && res.winX >= s.autoStopWin) { this.stopAuto(); this.toast(`Auto-spin stopped: a win of ${s.autoStopWin}× bet or more.`, 4000); return; }
+      if (s.autoStopLoss && this.autoStartBalance - this.save.balance >= s.autoStopLoss * res.bet - 1e-9) { this.stopAuto(); this.toast(`Auto-spin stopped: balance down ${fmt(this.autoStartBalance - this.save.balance)} since it started.`, 4000); return; }
       if (!this.autoUntilFeature) this.autoLeft--;
       this.refreshAll();
       if (this.autoLeft > 0) void wait(this.turbo ? 150 : 450).then(() => { if (this.autoLeft > 0 && !this.busy) void this.spin(); });

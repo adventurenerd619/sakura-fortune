@@ -30,14 +30,17 @@ if (!fs.existsSync(props)) {
   console.log('Created release signing key in android/keystore/ (back it up; it is needed for future updates).');
 }
 
-// build
+// build: the signed APK (sideloading) or, with --bundle, the signed App Bundle Google Play needs
 // full, quoted path: the project folder has a space, and some shells don't search the current directory
+const bundle = process.argv.includes('--bundle');
 const gradlew = path.resolve('android', process.platform === 'win32' ? 'gradlew.bat' : 'gradlew');
-execSync(`"${gradlew}" assembleRelease --no-daemon --console=plain`, { cwd: 'android', stdio: 'inherit', env });
+execSync(`"${gradlew}" ${bundle ? 'bundleRelease' : 'assembleRelease'} --no-daemon --console=plain`, { cwd: 'android', stdio: 'inherit', env });
 
 const version = JSON.parse(fs.readFileSync('package.json', 'utf8')).version;
-const apk = 'android/app/build/outputs/apk/release/app-release.apk';
+const built = bundle ? 'android/app/build/outputs/bundle/release/app-release.aab' : 'android/app/build/outputs/apk/release/app-release.apk';
 fs.mkdirSync('dist', { recursive: true });
-const out = `dist/Sakura Fortune-${version}-android.apk`;
-fs.copyFileSync(apk, out);
-console.log(`\nAPK ready: ${out} (${(fs.statSync(out).size / 1048576).toFixed(1)} MB)`);
+const out = `dist/Sakura Fortune-${version}-android.${bundle ? 'aab' : 'apk'}`;
+fs.copyFileSync(built, out);
+console.log(`
+${bundle ? 'App Bundle' : 'APK'} ready: ${out} (${(fs.statSync(out).size / 1048576).toFixed(1)} MB)`);
+if (bundle) console.log('Upload it to Google Play with Play App Signing; keep android/keystore/ as your upload key.');

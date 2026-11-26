@@ -234,8 +234,11 @@ export interface ToriiResult {
   collected: number;
   mult: number;
   summit: boolean;
-  /** final win in x bet (collected x mult, capped by the caller) */
+  /** final win in x bet (collected x mult, cut to the max-win cap if it was reached) */
   win: number;
+  /** true when the max-win cap cut this climb short; uncappedWin is what it would have paid */
+  capped?: boolean;
+  uncappedWin?: number;
 }
 
 /** Random layout of the 24-space path: gates at 5/10/15/20, summit at 24, the rest weighted. */
@@ -429,8 +432,7 @@ function settle(rng: Rng, bet: number, base: CascadeResult | null, opts: {
       torii = playTorii(rng);
       if (!force?.summit || torii.summit || tries > 20000) break;
     }
-    const room = MAX_WIN_X - winX;
-    if (torii.win >= room) { torii.win = room; capped = true; }
+    capped = capTorii(torii, MAX_WIN_X - winX) || capped;
     winX += torii.win;
   }
   if (opts.omikuji && !capped) {
@@ -444,6 +446,15 @@ function settle(rng: Rng, bet: number, base: CascadeResult | null, opts: {
     masks: base ? [0, 2, 4].filter((r) => reelHas(base.finalBoard, r, SYM.MASK)).length : 0,
     omikuji, freeSpins, torii, winX, totalWin: money(winX, bet), capped, forced: !!force,
   };
+}
+
+/** Applies the max-win cap to a climb: keeps the uncapped total for the presentation. Returns true if capped. */
+export function capTorii(t: ToriiResult, room: number): boolean {
+  if (t.win < room) return false;
+  t.uncappedWin = t.win;
+  t.win = room;
+  t.capped = true;
+  return true;
 }
 
 /** Which features a finished base board triggers. */

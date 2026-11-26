@@ -147,9 +147,9 @@ table.hall td:last-child { font-weight: normal; font-size: 18px; }
 /* ---------- Omikuji slip ---------- */
 #slip { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(0.4) rotate(-6deg); opacity: 0; transition: transform 0.4s cubic-bezier(.2,1.6,.4,1), opacity 0.25s; pointer-events: none; z-index: 25; text-align: center; }
 #slip.show { transform: translate(-50%, -50%) scale(1) rotate(0); opacity: 1; pointer-events: auto; cursor: pointer; }
-#slip .pine { position: absolute; left: -330px; top: -60px; width: 300px; opacity: 0; transition: opacity 0.3s; }
+#slip .pine { position: absolute; left: 0; top: -150px; width: 300px; opacity: 0; transition: opacity 0.3s; }
 #slip.kyo .pine { opacity: 1; }
-#slip.tie .slip-paper { transform: translate(-260px, -40px) scale(0.22) rotate(-70deg); opacity: 0.85; transition: transform 0.8s ease-in, opacity 0.8s; }
+#slip.tie .slip-paper { transform: translate(0, -330px) scale(0.22) rotate(-70deg); opacity: 0.85; transition: transform 0.8s ease-in, opacity 0.8s; }
 .slip-paper { width: 300px; min-height: 520px; background: linear-gradient(90deg, #fffaf0, #f5eedc 50%, #fffaf0); border: 3px solid var(--ink); border-top: 22px solid var(--red); border-radius: 6px; padding: 26px 18px; color: var(--ink); box-shadow: 0 16px 40px rgba(0,0,0,0.55); display: flex; flex-direction: column; align-items: center; gap: 14px; }
 #slip.kyo .slip-paper { border-top-color: #555; }
 .slip-kanji { font-family: var(--jp); font-size: 150px; line-height: 1.05; color: var(--red-d); writing-mode: vertical-rl; cursor: help; }
@@ -187,3 +187,8 @@ body.reduced-motion #pressPrompt.show { animation: none; }
 #stage.portrait .pt-grid { flex-wrap: wrap; }
 #stage.portrait .pl-grid { grid-template-columns: repeat(5, 1fr); }
 #stage.portrait #debug { top: 300px; }
+
+/* auto-spin stop limits (inside the AUTO menu) */
+.auto-limits { border-top: 2px solid var(--gold-d); margin-top: 6px; padding-top: 8px; display: flex; flex-direction: column; gap: 8px; }
+.auto-limit-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 18px; color: var(--cream); white-space: nowrap; }
+.auto-limit-row select { font-family: var(--serif); font-size: 18px; padding: 4px 6px; border-radius: 8px; }

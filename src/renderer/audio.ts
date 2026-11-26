@@ -256,9 +256,9 @@ export class Audio {
   featureStart() {
     const t = this.now;
     // taiko roll building to a big hit
-    for (let i = 0; i < 10; i++) this.taiko(t + i * (0.18 - i * 0.012), 0.25 + i * 0.04, 90);
-    this.taiko(t + 1.45, 0.9, 70);
-    this.templeBell(t + 1.45, 0.25);
+    for (let i = 0; i < 10; i++) this.taiko(t + i * (0.18 - i * 0.012), 0.1 + i * 0.014, 90);
+    this.taiko(t + 1.45, 0.36, 70);
+    this.templeBell(t + 1.45, 0.14);
   }
   bigWin() { const t = this.now; this.taiko(t, 0.7, 80); this.taiko(t + 0.25, 0.7, 80); this.chime(6, t + 0.3, 0.14); }
   tier() { this.taiko(this.now, 0.6, 85); this.chime(4, this.now, 0.12); }
@@ -276,8 +276,8 @@ export class Audio {
     else if (effect === 'fox') { this.flute(mtof(81), this.now, 0.5, 0.12, this.sfx); this.whoosh(this.now, 0.1, 0.5); }
     else this.whoosh(this.now, 0.06, 0.6);
   }
-  summit() { this.templeBell(this.now, 0.35); this.featureStartSmall(); this.chime(6, this.now + 0.3, 0.14); }
-  private featureStartSmall() { const t = this.now; this.taiko(t, 0.7, 80); this.taiko(t + 0.2, 0.7, 80); }
+  summit() { this.templeBell(this.now, 0.22); this.featureStartSmall(); this.chime(6, this.now + 0.3, 0.1); }
+  private featureStartSmall() { const t = this.now; this.taiko(t, 0.45, 80); this.taiko(t + 0.2, 0.45, 80); }
   lanternLit() { this.koto(mtof(81), this.now, 0.16); this.chime(2, this.now, 0.1); }
   stickyLock() { this.koto(mtof(69), this.now, 0.18, this.sfx, 0.9); this.suzu(this.now, 0.06); }
   retrigger() { this.taiko(this.now, 0.6, 90); this.chime(5, this.now + 0.1, 0.14); }
@@ -293,15 +293,15 @@ export class Audio {
         if (s % 2 === 0) {
           const pat = [0, 2, 4, 5, 7, 5, 4, 2];
           const shift = [0, 0, -2, 1][bar % 4];
-          a.koto(deg(pat[(s / 2) % 8] + shift), t, 0.07, a.music, 1.1);
+          a.koto(deg(pat[(s / 2) % 8] + shift), t, 0.11, a.music, 1.1);
         }
-        if (s % 8 === 0) a.koto(mtof(a.tracks.base.root - 12 + [0, 0, -2, 5][bar % 4]), t, 0.12, a.music, 2.2);
+        if (s % 8 === 0) a.koto(mtof(a.tracks.base.root - 12 + [0, 0, -2, 5][bar % 4]), t, 0.17, a.music, 2.2);
         if (s === 0) a.taiko(t, 0.18, 85, a.music);
         if (s === 10 && bar % 2 === 1) a.shime(t, 0.07);
         // flute phrase every other bar
         if (bar % 4 === 2 && s % 4 === 0) {
           const m = a.melody[(bar * 4 + s / 4) % a.melody.length];
-          if (m !== -99) a.flute(deg(m + 7), t, spb * 3.6, 0.07);
+          if (m !== -99) a.flute(deg(m + 7), t, spb * 3.6, 0.09);
         }
       },
     },
@@ -314,7 +314,7 @@ export class Audio {
         if (s === 0 && bar % 2 === 0) a.taiko(t, 0.12, 70, a.music);
         if (s % 8 === 0) {
           const m = a.melody[(bar * 2 + s / 8) % a.melody.length];
-          if (m !== -99) a.flute(deg(m + 5), t, spb * 7, 0.09);
+          if (m !== -99) a.flute(deg(m + 5), t, spb * 7, 0.07);
         }
         if (s === 6 && Math.random() < 0.35) a.chime(2, t, 0.03);
       },
@@ -359,18 +359,23 @@ export class Audio {
     this.melody = Array.from({ length: 16 }, (_, i) => (i % 4 === 3 && Math.random() < 0.5 ? -99 : Math.floor(Math.random() * 6) - 1));
     this.nextT = this.now + 0.1;
     this.stepN = 0;
-    const def = this.tracks[track];
+    this.timer = window.setInterval(() => this.schedule(), 50);
+  }
+  /** The track that is playing (or will play once audio is unlocked). */
+  get currentTrack() { return this.track; }
+  /** Schedules the current track's notes up to 0.25 s ahead (called every 50 ms; the level checker calls it directly). */
+  schedule() {
+    if (!this.track || !this.trackGain) return;
+    const def = this.tracks[this.track];
+    const spb = 60 / def.bpm / 4;
     const realMusic = this.music;
-    this.timer = window.setInterval(() => {
-      const spb = 60 / def.bpm / 4;
-      while (this.nextT < this.now + 0.25) {
-        const bar = Math.floor(this.stepN / 16), s = this.stepN % 16;
-        // route this track's notes through its own fade gain
-        this.music = g as unknown as GainNode;
-        try { def.step(this, s, this.nextT, bar, spb * 4); } finally { this.music = realMusic; }
-        this.nextT += spb;
-        this.stepN++;
-      }
-    }, 50);
+    while (this.nextT < this.now + 0.25) {
+      const bar = Math.floor(this.stepN / 16), s = this.stepN % 16;
+      // route this track's notes through its own fade gain
+      this.music = this.trackGain;
+      try { def.step(this, s, this.nextT, bar, spb * 4); } finally { this.music = realMusic; }
+      this.nextT += spb;
+      this.stepN++;
+    }
   }
 }

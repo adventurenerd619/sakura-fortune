@@ -7,6 +7,10 @@ export interface Settings {
   denomIndex: number; moneyMode: 'credits' | 'dollars'; moneyModeChosen?: boolean;
   /** 'auto' follows the system setting */
   reducedMotion: 'auto' | 'on' | 'off';
+  /** auto-spin stops on a single win of at least this many x bet (0 = off) */
+  autoStopWin: number;
+  /** auto-spin stops once the balance has dropped by this many x bet since it started (0 = off) */
+  autoStopLoss: number;
 }
 export interface SaveData {
   version: number;
@@ -40,7 +44,7 @@ export function defaultSave(): SaveData {
     version: 1,
     balance: STARTING_CREDITS,
     betIndex: DEFAULT_BET_INDEX,
-    settings: { master: 0.8, music: 0.55, sfx: 0.8, muted: false, turbo: false, denomIndex: DEFAULT_DENOM_INDEX, moneyMode: 'dollars', moneyModeChosen: false, reducedMotion: 'auto' },
+    settings: { master: 0.8, music: 0.55, sfx: 0.8, muted: false, turbo: false, denomIndex: DEFAULT_DENOM_INDEX, moneyMode: 'dollars', moneyModeChosen: false, reducedMotion: 'auto', autoStopWin: 0, autoStopLoss: 0 },
     session: newStats(STARTING_CREDITS),
     allTime: newStats(STARTING_CREDITS),
     sessionStart: new Date().toISOString(),

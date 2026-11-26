@@ -209,6 +209,18 @@ app.whenReady().then(async () => {
     await run('game.save.settings.turbo = true; game.startAuto(10)');
     await waitFor('game.autoLeft === 0 && !game.busy', 120000);
     check('auto-spin 10 completed', (await js('game.autoLeft')) === 0);
+    // stop limits: a 250x+ shrine climb stops auto-spin set to "stop on a win of 10x bet"
+    await run("game.save.settings.autoStopWin = 10; game.force = {feature:'torii', summit:true}; game.startAuto(25)");
+    await waitFor('game.autoLeft === 0 && !game.busy', 120000);
+    check('auto-spin stops on a big win', (await js('game.save.session.debugActions')) > 0 && /Auto-spin stopped: a win/.test(await js('game.hud.toast.textContent')), await js('game.hud.toast.textContent'));
+    await shot('31a-auto-stopped-on-win');
+    await run('game.save.settings.autoStopWin = 0; game.save.settings.autoStopLoss = 5');
+    const lossStart = await js('game.save.balance');
+    await run('game.startAuto(200)');
+    await waitFor('game.autoLeft === 0 && !game.busy', 400000);
+    const lossEnd = await js('game.save.balance'), lossBet = await js('game.bet');
+    check('auto-spin stops when the balance drops by the limit', (lossStart - lossEnd) >= 5 * lossBet - 1e-9 && (lossStart - lossEnd) < 6 * lossBet + 1e-9, `down ${(lossStart - lossEnd).toFixed(2)} at bet ${lossBet}`);
+    await run('game.save.settings.autoStopLoss = 0; game.toggleMenu(game.hud.autoMenu, game.hud.autoBtn)'); await sleep(300); await shot('31b-auto-menu-limits'); await run('game.hideMenus()');
 
     // ---- portrait layout
     win.setContentSize(540, 1080);
@@ -228,11 +240,43 @@ app.whenReady().then(async () => {
     await shot('33-portrait-torii');
     await js('window.__hold = false');
     await waitIdle();
-    await run('game.paytable.tab=0; game.paytable.open()'); await sleep(400); await shot('34-portrait-paytable');
+    // portrait free spins: lantern meter must not sit on the side panel or the reels
+    const overlaps = (pixiObj, domSel) => js(`(() => {
+      const st = document.getElementById('stage').getBoundingClientRect(), s = st.width / game.app.screen.width;
+      const r = document.querySelector(${JSON.stringify(domSel)}).getBoundingClientRect();
+      const d = { x: (r.left - st.left) / s, y: (r.top - st.top) / s, w: r.width / s, h: r.height / s };
+      const b = ${pixiObj}.getBounds();
+      return b.x < d.x + d.w && b.x + b.width > d.x && b.y < d.y + d.h && b.y + b.height > d.y;
+    })()`);
+    const reelsHit = (pixiObj) => js(`(() => { const a = ${pixiObj}.getBounds(), b = game.frame.getBounds();
+      return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y; })()`);
+    await run("game.save.settings.turbo = true; game.refreshAll(); game.force = {feature:'freespins'}; game.spin()");
+    await waitFor('game.lanternLayer.visible', 30000);
+    await sleep(2500);
+    await shot('34-portrait-free-spins');
+    check('portrait: lantern meter clear of the side panel', !(await overlaps('game.lanternLayer', '#side')));
+    check('portrait: lantern meter clear of the reels', !(await reelsHit('game.lanternLayer')));
+    await waitIdle();
+    // portrait Omikuji: box and slip
+    await js('window.__hold = true');
+    await run("game.force = {feature:'omikuji', slip:'kyo'}; game.spin()");
+    await waitFor('game.omikujiBox.visible && !!game.waiter', 30000);
+    await sleep(600);
+    await shot('35-portrait-omikuji-box');
+    check('portrait: Omikuji box clear of the reels', !(await reelsHit('game.omikujiBox')));
+    check('portrait: Omikuji box clear of the side panel', !(await overlaps('game.omikujiBox', '#side')));
+    await js('game.waiter()');
+    await waitFor("game.hud.slip.classList.contains('show')", 5000);
+    await sleep(600);
+    await shot('36-portrait-omikuji-slip');
+    await js('window.__hold = false');
+    await waitIdle();
+    await run('game.save.settings.turbo = false; game.refreshAll()');
+    await run('game.paytable.tab=0; game.paytable.open()'); await sleep(400); await shot('37-portrait-paytable');
     await run('game.paytable.modal.close()');
     win.setContentSize(1600, 900);
     await sleep(1000);
-    await shot('35-back-to-landscape');
+    await shot('38-back-to-landscape');
 
     const save = JSON.parse(fs.readFileSync(store.files.main, 'utf-8'));
     log('save ok: balance', save.balance, 'session spins', save.session.spins, 'allTime spins', save.allTime.spins, 'debugActions', save.allTime.debugActions,
