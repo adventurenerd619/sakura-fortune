@@ -1,0 +1,23 @@
+node_modules/
+/app/
+/dist/
+/smoke-out/
+*.log
+android/keystore/
+android/keystore.properties
+android/local.properties
+android/app/build/
+android/build/
+android/.gradle/
+/controller-out/
+# signing keys and secrets (never commit)
+*.jks
+*.keystore
+keystore.properties
+# build / tool caches
+.gradle/
+*.tmp
+builder-debug.yml
+/portrait-out/
+/smoke-out/
+/.claude/settings.local.json

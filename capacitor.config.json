@@ -1,0 +1,11 @@
+{
+  "appId": "com.sakurafortune.slots",
+  "appName": "Sakura Fortune",
+  "webDir": "app/renderer",
+  "android": {
+    "backgroundColor": "#1F2A44",
+    "allowMixedContent": false,
+    "webContentsDebuggingEnabled": false
+  },
+  "plugins": {}
+}

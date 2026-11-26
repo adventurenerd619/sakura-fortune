@@ -1,0 +1,101 @@
+{
+  "name": "sakura-fortune",
+  "version": "1.0.0",
+  "description": "Sakura Fortune - a play-money Japanese spring-festival slot machine",
+  "main": "app/main.js",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "build:prod": "node scripts/build.mjs --prod",
+    "start": "node scripts/build.mjs && electron .",
+    "dev": "node scripts/build.mjs && electron .",
+    "serve": "node scripts/build.mjs && node scripts/serve.mjs",
+    "typecheck": "tsc -p .",
+    "test": "tsx --test tests/*.test.ts",
+    "sim": "tsx scripts/simulate.ts",
+    "strips": "tsx scripts/strips.ts",
+    "icon": "node scripts/make-icon.mjs",
+    "dist": "node scripts/make-icon.mjs && node scripts/build.mjs --prod && electron-builder --win nsis portable",
+    "dist:linux": "node scripts/make-icon.mjs && node scripts/build.mjs --prod && electron-builder --linux && node scripts/steamos-package.mjs",
+    "android:sync": "node scripts/build.mjs --prod && cap sync android",
+    "android:build": "node scripts/build.mjs --prod && cap sync android && node scripts/android-build.mjs",
+    "steam-art": "electron scripts/steam-art.cjs",
+    "test:persist": "node scripts/build.mjs && electron scripts/test-persistence.cjs",
+    "test:smoke": "node scripts/build.mjs && electron scripts/smoke-main.cjs smoke-out"
+  },
+  "author": "Sakura Fortune",
+  "license": "UNLICENSED",
+  "type": "commonjs",
+  "devDependencies": {
+    "@capacitor/cli": "^8.6.2",
+    "@types/node": "^26.6.6",
+    "electron": "^45.4.1",
+    "electron-builder": "^26.18.0",
+    "esbuild": "^0.28.2",
+    "pixi.js": "^8.23.0",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  },
+  "build": {
+    "appId": "com.sakurafortune.slots",
+    "productName": "Sakura Fortune",
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    },
+    "files": [
+      "app/**/*",
+      "package.json",
+      "!app/**/*.map",
+      "!**/node_modules/@capacitor/**"
+    ],
+    "extraMetadata": {
+      "main": "app/main.js"
+    },
+    "win": {
+      "icon": "build/icon.png",
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "artifactName": "Sakura Fortune Setup ${version}.${ext}",
+      "allowToChangeInstallationDirectory": true
+    },
+    "portable": {
+      "artifactName": "Sakura Fortune Portable ${version}.${ext}"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "tar.gz",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "category": "Game",
+      "icon": "build/icon.png",
+      "executableName": "sakura-fortune",
+      "artifactName": "Sakura Fortune-${version}-linux-${arch}.${ext}",
+      "synopsis": "A play-money Japanese spring-festival slot machine",
+      "description": "Sakura Fortune - a play-money Japanese spring-festival slot machine. Free fictional credits only.",
+      "extraFiles": [
+        {
+          "from": "steamos",
+          "to": ".",
+          "filter": [
+            "**/*"
+          ]
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/core": "^8.6.2",
+    "@capacitor/preferences": "^8.0.1"
+  }
+}

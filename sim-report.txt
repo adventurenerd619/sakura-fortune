@@ -1,0 +1,42 @@
+================ SAKURA FORTUNE RTP SIMULATION ================
+Spins: 10,000,000  buys: 1,000,000 each  seed 3
+Strip lengths: base 79, 75, 86, 76, 78 | free spins 68, 72, 72, 72, 72
+
+TOTAL RTP:              97.27%   (std dev per spin 9.47x, ±0.59% at 95%)
+  Base game + cascades: 39.52%
+  Omikuji Fortune Draw: 5.50%
+  Torii Path:           23.68%
+  Free Spins:           28.57%  (of which Bell scatter pays 0.77%)
+Hit rate:               27.98%  (1 in 3.57)
+Cascading spins:        26.49% of spins win; 0.199 extra cascades per winning spin
+Free Spins trigger:     1 in 276.3  (3/4/5 Bells: 34722 / 1442 / 30; avg 78.93x; 0.50 lantern retriggers each)
+Torii Path trigger:     1 in 242.9  (avg 57.51x; summit 3.09% of climbs)
+Both on one spin:       92
+Omikuji draw:           1 in 102.6  (avg 5.64x)  slips: Daikichi 2277, Chukichi 11480, Shokichi 32129, Kichi 51598, Kyo 14487
+Biggest win:            1115.05x  (free spins 1115.05x (28 spins, mult x3))
+Spins hitting the 5,000x cap: 0
+Win distribution (x bet):
+  none         72.02%   1 in 1.4
+  <1x          13.45%   1 in 7.4
+  1-5x         12.00%   1 in 8.3
+  5-10x         1.33%   1 in 75.1
+  10-25x        0.58%   1 in 173.1
+  25-50x        0.28%   1 in 351.6
+  50-250x       0.31%   1 in 324.3
+  250-1000x     0.03%   1 in 3276.5
+  1000x+        0.00%   1 in 3333333.3
+
+BONUS BUY TORII PATH (60x bet): RTP 96.32%  (±0.26%)
+  avg win 57.79x, std dev 80.47x, biggest 975.00x, summit 3.23%
+
+BONUS BUY FREE SPINS (80x bet): RTP 94.60%  (±0.19%)
+  avg win 75.68x, std dev 79.09x, biggest 1348.55x
+
+FAIL  Total RTP 95.5-96.5%
+PASS  Torii Path buy RTP 95.5-96.5%
+FAIL  Free Spins buy RTP 95.5-96.5%
+PASS  Hit rate 25-30%
+PASS  Free Spins about 1 in 280 (240-330)
+PASS  Torii Path about 1 in 240 (200-280)
+PASS  Max win within 5000x
+(632.5s)
