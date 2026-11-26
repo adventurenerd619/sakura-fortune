@@ -77,8 +77,8 @@ export const BASE_COUNTS: number[][] = [
   [10, 8, 8, 8, 8, 6, 6, 6, 6, 7, 0, 2, 4],
   [10, 8, 8, 8, 8, 6, 6, 6, 6, 5, 3, 1, 0],
   [10, 8, 8, 8, 8, 7, 7, 7, 7, 7, 3, 2, 4],
-  [9, 8, 8, 8, 8, 6, 6, 6, 6, 6, 3, 2, 0],
-  [9, 8, 8, 8, 8, 6, 6, 6, 6, 7, 0, 2, 4],
+  [8, 8, 8, 8, 8, 6, 6, 6, 6, 7, 3, 2, 0],
+  [8, 8, 8, 8, 8, 6, 6, 6, 6, 8, 0, 2, 4],
 ];
 /** Free spins strips: no Kitsune Masks; Wilds on reels 2-5 (they drift left as sticky Wilds). */
 export const FS_COUNTS: number[][] = [
