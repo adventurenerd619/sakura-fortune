@@ -82,6 +82,10 @@ class Game {
   pendingLayout: Orientation | null = null;
   confirmAction: (() => void) | null = null;
   padCursor: HTMLElement | null = null;
+  /** true while the player is using a controller (shows button hints, words prompts for the A button) */
+  padMode = false;
+  /** a bonus presentation is running at BONUS_PACE */
+  paced = false;
   lastResult: SpinResult | null = null;
 
   get bet() { return r2(BET_CREDITS[this.save.betIndex] * DENOMINATIONS[this.save.settings.denomIndex]); }
@@ -128,14 +132,14 @@ class Game {
     this.refreshAll();
 
     this.app.ticker.add((t) => this.tick(t.deltaMS));
-    this.pad = new GamepadInput((b) => this.onPad(b), () => this.toast('Controller connected. A: spin · B: back · X: auto · Y: bonus buy · D-pad: bet · LB/RB: denomination · LT: credits/$ · RT: turbo · Start: rules · View: stats', 6500));
+    this.pad = new GamepadInput((b) => this.onPad(b), () => this.toast('Controller connected. A: spin · B: back · X: auto · Y: bonus buy · D-pad: bet · LB/RB: denomination · LT: credits/$ · RT: turbo · Start: menu · View: stats', 6500));
     this.app.ticker.add(() => this.pad.poll(performance.now()));
     platform.onBackButton(() => this.onBack());
     platform.onPauseResume(
       () => { writeSave(this.save, true); if (platform.isNative) this.audio.ctx.suspend(); },
       () => { if (platform.isNative && this.audioStarted) this.audio.resume(); },
     );
-    if (!platform.canToggleFullscreen()) this.hud.btnFull.style.display = 'none';
+    if (!platform.canToggleFullscreen()) { this.hud.btnFull.style.display = 'none'; this.hud.menuFull.style.display = 'none'; }
     if (!platform.isNative && !platform.isElectron) this.hud.btnQuit.style.display = 'none';
     document.body.dataset.platform = platform.platformName;
     setInterval(() => this.secondTick(), 1000);
@@ -293,6 +297,16 @@ class Game {
     click(u.btnMute, () => this.toggleMute());
     click(u.btnFull, () => platform.toggleFullscreen());
     click(u.btnFunds, () => this.openCredits());
+    click(u.menuRules, () => { u.settings.close(); this.openRules(); });
+    click(u.menuStats, () => { u.settings.close(); this.openStats(); });
+    click(u.menuFunds, () => { u.settings.close(); this.openCredits(); });
+    click(u.menuFull, () => platform.toggleFullscreen());
+    this.paytable.modal.hint.textContent = 'LB / RB: pages · D-pad: scroll · B: back';
+    this.book.modal.hint.textContent = 'LB / RB: pages · LT / RT: this session / all time · D-pad: scroll · B: back';
+    u.settings.hint.textContent = 'D-pad: move · left / right: adjust a slider · A: select · B: back';
+    // touch, mouse or keyboard hides the controller hints again
+    window.addEventListener('pointerdown', () => this.setPadMode(false), true);
+    window.addEventListener('keydown', () => this.setPadMode(false), true);
     click(u.buyTorii, () => { u.buy.close(); void this.buyBonus('torii'); });
     click(u.buyFs, () => { u.buy.close(); void this.buyBonus('freespins'); });
     u.creditBtns.forEach((b, i) => click(b, () => { this.addCredits([100, 500, 1000][i], false); u.credits.close(); }));
@@ -391,20 +405,90 @@ class Game {
     this.padCursor?.classList.remove('pad-focus');
     this.padCursor = el;
     el?.classList.add('pad-focus');
+    el?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
   }
-  /** Buttons the D-pad can move between (the open panel or menu). */
-  padTargets(): HTMLElement[] {
+  /** The open panel or menu the D-pad works in. */
+  padScope(): HTMLElement | null {
     const open = this.modals().find((m) => m.isOpen());
-    const scope: HTMLElement | null = open ? open.bg : this.hud.autoMenu.classList.contains('open') ? this.hud.autoMenu : this.hud.denomMenu.classList.contains('open') ? this.hud.denomMenu : this.hud.debug.style.display === 'block' ? this.hud.debug : null;
-    if (!scope) return [];
-    return Array.from(scope.querySelectorAll<HTMLElement>('button, input, select')).filter((e) => e.offsetParent !== null && !(e as HTMLButtonElement).disabled);
+    return open ? open.bg : this.hud.autoMenu.classList.contains('open') ? this.hud.autoMenu : this.hud.denomMenu.classList.contains('open') ? this.hud.denomMenu : this.hud.debug.style.display === 'block' ? this.hud.debug : null;
   }
+  /** Controls the D-pad can move between (a panel's close button is left out: B closes). */
+  padTargets(): HTMLElement[] {
+    const scope = this.padScope();
+    if (!scope) return [];
+    return Array.from(scope.querySelectorAll<HTMLElement>('button, input, select')).filter((e) => e.offsetParent !== null && !(e as HTMLButtonElement).disabled && !e.matches('.modal > .x'));
+  }
+  /**
+   * Moves the highlight to the nearest control in the pressed direction, so side-by-side cards,
+   * button rows and tab strips work the way they look. With nothing that way, a long panel
+   * scrolls; otherwise the highlight wraps through the list.
+   */
+  padMove(targets: HTMLElement[], cur: HTMLElement | null, b: number) {
+    if (!cur) { this.setPadCursor(targets[0]); return; }
+    const dx = b === PAD.RIGHT ? 1 : b === PAD.LEFT ? -1 : 0, dy = b === PAD.DOWN ? 1 : b === PAD.UP ? -1 : 0;
+    const c = cur.getBoundingClientRect(), cx = c.left + c.width / 2, cy = c.top + c.height / 2;
+    // candidates that lie that way: past the current control's edge (a little overlap allowed)
+    const cands: { t: HTMLElement; gap: number; across: number }[] = [];
+    for (const t of targets) {
+      if (t === cur) continue;
+      const r = t.getBoundingClientRect(), tx = r.left + r.width / 2, ty = r.top + r.height / 2;
+      const along = dx ? (tx - cx) * dx : (ty - cy) * dy;
+      const gap = dx ? (dx > 0 ? r.left - c.right : c.left - r.right) : (dy > 0 ? r.top - c.bottom : c.top - r.bottom);
+      if (along <= 0 || gap < -Math.min(c.width, c.height) * 0.25) continue;
+      cands.push({ t, gap: Math.max(0, gap), across: dx ? Math.abs(ty - cy) : Math.abs(tx - cx) });
+    }
+    // the nearest row (or column) that way, then the control in it closest to the current one
+    const near = Math.min(...cands.map((k) => k.gap));
+    let best: HTMLElement | null = null, bestAcross = Infinity;
+    for (const k of cands) if (k.gap <= near + 16 && k.across < bestAcross) { bestAcross = k.across; best = k.t; }
+    if (best) { this.setPadCursor(best); return; }
+    const scroller = this.padScope()?.querySelector<HTMLElement>('.modal');
+    if (dy && scroller && scroller.scrollHeight > scroller.clientHeight + 2) {
+      const before = scroller.scrollTop;
+      scroller.scrollTop += dy * 220;
+      if (scroller.scrollTop !== before) return;
+    }
+    // wrap around: the farthest control the other way, in line with the current one
+    let wrap: HTMLElement | null = null, far = 0;
+    for (const t of targets) {
+      if (t === cur) continue;
+      const r = t.getBoundingClientRect();
+      const back = dx ? (dx > 0 ? c.left - r.right : r.left - c.right) : (dy > 0 ? c.top - r.bottom : r.top - c.bottom);
+      const across = dx ? Math.abs(r.top + r.height / 2 - cy) : Math.abs(r.left + r.width / 2 - cx);
+      const d = back - across * 2;
+      if (back > 0 && d > far) { far = d; wrap = t; }
+    }
+    if (wrap) this.setPadCursor(wrap);
+  }
+  setPadMode(on: boolean) {
+    if (this.padMode === on) return;
+    this.padMode = on;
+    document.body.classList.toggle('pad-mode', on);
+    this.refreshPadHints();
+    // reword a prompt already on screen
+    const p = this.hud.pressPrompt;
+    if (p.classList.contains('show')) p.textContent = this.promptText(p.dataset.raw ?? '');
+  }
+  /** Prompts say "SPIN"; with a controller in hand they say "A". */
+  promptText(t: string) {
+    if (!this.padMode) return t;
+    return t.replace(/Tap it or press SPIN|Tap or press SPIN|Press SPIN/g, 'Press A').replace(/press SPIN/g, 'press A');
+  }
+  refreshPadHints() {
+    this.hud.padHints.textContent = this.paced
+      ? ['A  continue / roll', 'B  fast-forward'].join('\n')
+      : ['A  spin', 'X  auto-spin', 'Y  buy bonus', 'D-pad  bet', 'LB / RB  coin value', 'Start  menu', 'View  stats'].join('\n');
+  }
+  openRules() { this.paytable.open(); this.setPadCursor(this.paytable.tabs[this.paytable.tab]); }
+  openStats() { this.book.open(); this.setPadCursor(this.book.tabs[this.book.tab]); }
   onPad(b: number) {
     this.audio.resume();
     this.audioStarted = true;
+    this.setPadMode(true);
+    // Start toggles the menu: with a panel open it closes it
+    if (b === PAD.START && this.padScope()) { if (!this.closeTopModal()) this.hideMenus(); this.setPadCursor(null); return; }
     const targets = this.padTargets();
     if (targets.length) {
-      const i = Math.max(0, targets.indexOf(this.padCursor as HTMLElement));
       const cur = this.padCursor && targets.includes(this.padCursor) ? this.padCursor : null;
       // a highlighted slider is adjusted with left / right
       if (cur instanceof HTMLInputElement && cur.type === 'range' && (b === PAD.LEFT || b === PAD.RIGHT)) {
@@ -423,8 +507,7 @@ class Game {
         return;
       }
       if (book === this.book && (b === PAD.LT || b === PAD.RT)) { this.book.modeBtn.click(); return; }
-      if (b === PAD.UP || b === PAD.LEFT) this.setPadCursor(targets[(i - 1 + targets.length) % targets.length]);
-      else if (b === PAD.DOWN || b === PAD.RIGHT) this.setPadCursor(targets[(i + 1) % targets.length]);
+      if (b === PAD.UP || b === PAD.DOWN || b === PAD.LEFT || b === PAD.RIGHT) this.padMove(targets, cur, b);
       else if (b === PAD.A) {
         const el = cur ?? targets[0];
         if (el instanceof HTMLInputElement && el.type === 'checkbox') { el.checked = !el.checked; el.dispatchEvent(new Event('change')); }
@@ -446,8 +529,8 @@ class Game {
       case PAD.RB: this.setDenom(this.save.settings.denomIndex + 1); break;
       case PAD.LT: this.toggleMoney(); break;
       case PAD.RT: this.toggleTurbo(); break;
-      case PAD.START: this.paytable.open(); this.setPadCursor(this.paytable.tabs[0]); break;
-      case PAD.VIEW: this.book.open(); this.setPadCursor(this.book.tabs[0]); break;
+      case PAD.START: if (this.busy) this.busyHint(); else this.openSettings(); break;
+      case PAD.VIEW: this.openStats(); break;
     }
   }
   /** Android back button / controller B. */
@@ -572,7 +655,7 @@ class Game {
     const pads = this.pad.list();
     u.padList.textContent = pads.length ? pads.map((p) => `${p.index + 1}: ${p.id} (${p.mapping})`).join('\n') : 'No controller detected. Press a button on it to wake it up.';
     u.settings.open();
-    this.setPadCursor(u.vol.master);
+    this.setPadCursor(u.menuRules);
   }
   openBuy() {
     if (this.busy) { this.busyHint(); return; }
@@ -609,6 +692,8 @@ class Game {
   }
   /** Slows the animation clock for a bonus presentation (unless turbo or fast-forward is on). */
   bonusPace(on: boolean) {
+    this.paced = on;
+    this.refreshPadHints();
     if (this.fast) return;
     clock.speed = on && !this.turbo ? BONUS_PACE : 1;
   }
@@ -617,16 +702,28 @@ class Game {
     this.fast = true;
     clock.speed = 3;
   }
-  /** Waits for the player (SPIN, A, tap); during auto-spin or fast-forward it continues by itself. */
-  waitForPress(prompt: string, autoMs = 1400, button = 'GO'): Promise<void> {
+  /**
+   * Waits for the player (SPIN, A, tap). Bonus prompts always wait, even during auto-spin or a
+   * fast-forward: the player starts each bonus and rolls every die. A press also ends a
+   * fast-forward, so the next part plays at the normal bonus pace.
+   */
+  waitForPress(prompt: string, button = 'GO'): Promise<void> {
     return new Promise((resolve) => {
       let done = false;
-      const finish = () => { if (done) return; done = true; this.waiter = null; this.hud.pressPrompt.classList.remove('show'); this.hud.spinBtn.textContent = 'SPIN'; resolve(); };
+      const finish = () => {
+        if (done) return;
+        done = true;
+        this.waiter = null;
+        this.hud.pressPrompt.classList.remove('show');
+        this.hud.spinBtn.textContent = 'SPIN';
+        if (this.fast) { this.fast = false; this.bonusPace(this.paced); }
+        resolve();
+      };
       this.waiter = finish;
-      this.hud.pressPrompt.textContent = prompt;
+      this.hud.pressPrompt.dataset.raw = prompt;
+      this.hud.pressPrompt.textContent = this.promptText(prompt);
       this.hud.pressPrompt.classList.add('show');
       this.hud.spinBtn.textContent = button;
-      if (this.autoLeft > 0 || this.fast) void wait(this.fast ? 250 : autoMs).then(finish);
     });
   }
 
@@ -822,8 +919,8 @@ class Game {
     this.audio.featureStart();
     this.mascot.bow(2000);
     await wait(this.quick ? 300 : 1500);
-    const intro = this.waitForPress('Press SPIN to begin', 2500, 'START');
-    await this.overlays.banner('LANTERN FESTIVAL', `${bought ? 'Bonus buy · ' : `${fs.bells} Shrine Bells · `}${fs.awarded} free spins + ${fmt(fs.scatterPay * bet)}`, intro, 'Tap or press SPIN to begin');
+    const intro = this.waitForPress('Press SPIN to begin', 'START');
+    await this.overlays.banner('LANTERN FESTIVAL', `${bought ? 'Bonus buy · ' : `${fs.bells} Shrine Bells · `}${fs.awarded} free spins + ${fmt(fs.scatterPay * bet)}`, intro, this.promptText('Tap or press SPIN to begin'));
     this.audio.playMusic('night');
     void this.bg.show('night');
     this.frame.texture = TEX.frameNight;
@@ -862,8 +959,8 @@ class Game {
       this.hud.fpLine3.textContent = `Win ${fmt(this.shownWin)}`;
       await wait(this.quick ? 100 : 400);
     }
-    const outro = this.waitForPress('Press SPIN to continue', 2500, 'OK');
-    await this.overlays.banner('FESTIVAL COMPLETE', `Free spins won ${fmt(fs.win * bet)}${fs.capped ? ' (maximum win)' : ''}`, outro, 'Tap or press SPIN to continue');
+    const outro = this.waitForPress('Press SPIN to continue', 'OK');
+    await this.overlays.banner('FESTIVAL COMPLETE', `Free spins won ${fmt(fs.win * bet)}${fs.capped ? ' (maximum win)' : ''}`, outro, this.promptText('Tap or press SPIN to continue'));
     this.reels.setSticky(null);
     this.lanternLayer.visible = false;
     this.hud.featurePanel.classList.remove('show');
@@ -883,8 +980,8 @@ class Game {
     this.audio.featureStart();
     this.mascot.bow(2000);
     await wait(this.quick ? 300 : 1500);
-    const intro = this.waitForPress('Press SPIN to begin', 2500, 'START');
-    await this.overlays.banner('TORII PATH', `${bought ? 'Bonus buy · ' : 'Three Kitsune Masks · '}${t.startRolls} rolls to climb to the shrine`, intro, 'Tap or press SPIN to begin');
+    const intro = this.waitForPress('Press SPIN to begin', 'START');
+    await this.overlays.banner('TORII PATH', `${bought ? 'Bonus buy · ' : 'Three Kitsune Masks · '}${t.startRolls} rolls to climb to the shrine`, intro, this.promptText('Tap or press SPIN to begin'));
     this.audio.playMusic('climb');
     await this.bg.show('mountain', 600);
     this.reelLayer.visible = false;
@@ -895,7 +992,7 @@ class Game {
     this.torii.alpha = 0;
     await tween(this.torii, { alpha: 1 }, 400);
     for (const r of t.rolls) {
-      await this.waitForPress('Tap or press SPIN to roll', 900, 'ROLL');
+      await this.waitForPress('Tap or press SPIN to roll', 'ROLL');
       this.audio.dieRoll();
       await this.torii.playRoll(r, this.quick, { hop: () => this.audio.hop(), gate: () => this.audio.gate(), land: (e) => this.audio.land(e), summit: () => this.audio.summit() });
     }
@@ -904,9 +1001,9 @@ class Game {
     // the 5,000x cap can cut a climb short: say so rather than show two different totals
     if (t.capped) sub += `
 Maximum win reached: ${fmt(t.win * bet)} paid`;
-    const outro = this.waitForPress('Press SPIN to continue', 2500, 'OK');
+    const outro = this.waitForPress('Press SPIN to continue', 'OK');
     const cu = this.countUp(t.win * bet, 1200);
-    await this.overlays.banner(t.summit ? 'SHRINE REACHED!' : 'CLIMB COMPLETE', sub, outro, 'Tap or press SPIN to continue');
+    await this.overlays.banner(t.summit ? 'SHRINE REACHED!' : 'CLIMB COMPLETE', sub, outro, this.promptText('Tap or press SPIN to continue'));
     await cu;
     await tween(this.torii, { alpha: 0 }, 300);
     this.torii.visible = false;
@@ -931,7 +1028,7 @@ Maximum win reached: ${fmt(t.win * bet)} paid`;
     const baseX = L.omikuji.x;
     void every((_dt, el) => { box.x = baseX + Math.sin(el / 30) * 8; box.rotation = Math.sin(el / 45) * 0.06; if (Math.floor(el / 600) !== Math.floor((el - 16) / 600)) this.audio.omikujiShake(); return shaking; });
     this.audio.omikujiShake();
-    await this.waitForPress('The shrine box shakes! Tap it or press SPIN to draw', 1400, 'DRAW');
+    await this.waitForPress('The shrine box shakes! Tap it or press SPIN to draw', 'DRAW');
     shaking = false;
     box.x = baseX; box.rotation = 0;
     for (let i = 0; i < o.draws.length; i++) {
@@ -957,7 +1054,7 @@ Maximum win reached: ${fmt(t.win * bet)} paid`;
     this.audio.slipReveal(s.key !== 'kyo');
     if (s.key !== 'kyo') { this.mascot.wave(1600); this.fx.sparkles(L.cx, L.cy, 20, 400); }
     else this.mascot.surprise(1200);
-    await this.waitForPress(kyoFirst ? 'Tap or press SPIN to tie it and draw again' : 'Tap or press SPIN to continue', 1600, kyoFirst ? 'TIE' : 'OK');
+    await this.waitForPress(kyoFirst ? 'Tap or press SPIN to tie it and draw again' : 'Tap or press SPIN to continue', kyoFirst ? 'TIE' : 'OK');
     if (kyoFirst) {
       u.slip.classList.add('tie');
       await wait(this.quick ? 250 : 900);

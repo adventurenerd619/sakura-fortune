@@ -66,11 +66,22 @@ app.whenReady().then(async () => {
     await pad(P.B);
     check('B closes the auto-spin menu', !(await js("game.hud.autoMenu.classList.contains('open')")));
 
-    // ---- add funds: no keyboard until asked for
-    await js('game.openCredits(); 0'); await sleep(300);
+    // ---- Start opens the menu; every panel is reachable from it
+    await pad(P.START, 300);
+    check('Start opens the menu', await js('game.hud.settings.isOpen()'));
+    check('menu cursor starts on Rules & Pays', (await cursor()) === 'Rules & Pays|true', await cursor());
+    await pad(P.RIGHT);
+    check('D-pad right moves along the shortcut row', (await cursor()) === 'Stats|true', await cursor());
+    await pad(P.START);
+    check('Start closes the menu again', !(await js('game.anyModalOpen()')));
+    check('controller hints are shown', await js("getComputedStyle(game.hud.padHints).display !== 'none'"));
+
+    // ---- add funds (from the menu): no keyboard until asked for
+    await pad(P.START, 300); await pad(P.RIGHT); await pad(P.RIGHT); await pad(P.A, 300);
+    check('Add Play Money opens from the menu', await js('game.hud.credits.isOpen()'));
     check('Add Funds does not focus the amount box (no on-screen keyboard)', !(await js('document.activeElement === game.hud.creditInput')));
     check('cursor starts on the first quick option', (await cursor()).startsWith('+$100'), await cursor());
-    await pad(P.DOWN); await pad(P.DOWN); await pad(P.DOWN);
+    await pad(P.DOWN);
     check('moving onto the amount box highlights it without focusing it', (await cursor()) === 'INPUT|true' && !(await js('document.activeElement === game.hud.creditInput')), await cursor());
     await shot('2-add-funds-cursor');
     await pad(P.A);
@@ -79,7 +90,9 @@ app.whenReady().then(async () => {
     await pad(P.B);
 
     // ---- settings: sliders and dropdown
-    await js('game.openSettings(); 0'); await sleep(300);
+    await pad(P.START, 300);
+    await pad(P.DOWN);
+    check('down from the shortcuts reaches the first slider', (await cursor()) === 'INPUT|true', await cursor());
     const vol0 = await js('game.save.settings.master');
     await pad(P.LEFT);
     check('left on a highlighted slider turns it down', Math.abs((await js('game.save.settings.master')) - (vol0 - 0.05)) < 1e-9, `${vol0} -> ${await js('game.save.settings.master')}`);
@@ -108,8 +121,12 @@ app.whenReady().then(async () => {
     await shot('3-stats-page');
     await pad(P.B);
 
-    // ---- rules / paytable (Start)
-    await pad(P.START, 300);
+    // ---- rules / paytable (menu > Rules & Pays)
+    await pad(P.START, 300); await pad(P.A, 300);
+    check('Rules opens from the menu', await js('game.paytable.modal.isOpen()'));
+    const sc0 = await js('game.paytable.modal.modal.scrollTop');
+    await pad(P.DOWN);
+    check('D-pad down scrolls a long Rules page', (await js('game.paytable.modal.modal.scrollTop')) > sc0);
     const p0 = await js('game.paytable.tab');
     await pad(P.RB);
     check('RB changes Rules page', (await js('game.paytable.tab')) === (p0 + 1) % 4);
@@ -122,16 +139,28 @@ app.whenReady().then(async () => {
     // ---- bonus buy with Y
     await pad(P.Y, 300);
     check('Y opens the bonus buy', await js('game.hud.buy.isOpen()'));
+    await pad(P.RIGHT);
+    check('D-pad right moves to the second bonus card', await js('game.padCursor === game.hud.buyFs'));
     await pad(P.B);
 
     // ---- A rolls the die on the Torii Path
-    await js("game.save.settings.turbo = false; game.refreshAll(); game.force = {feature:'torii'}; game.spin(); 0");
+    // A twice: spin, then fast-forward the reels. The bonus must still wait for the player.
+    await js("game.save.settings.turbo = false; game.refreshAll(); game.force = {feature:'torii'}; 0");
+    await pad(P.A, 250); await pad(P.A);
     await waitFor('!!game.waiter && game.inFeature');
+    await sleep(3000);
+    check('fast-forward does not start the Torii Path by itself', (await js('!!game.waiter')) && !(await js('game.torii.visible')));
+    check('prompt names the A button', (await js('game.hud.pressPrompt.textContent')).includes('Press A'), await js('game.hud.pressPrompt.textContent'));
     await pad(P.A);
+    check('a press ends the fast-forward', !(await js('game.fast')));
     check('A answers the Torii Path banner', await waitFor('game.torii.visible && !!game.waiter', 15000));
     const rolls = await js('game.lastResult.torii.rolls.length');
     for (let i = 0; i < rolls; i++) {
       await waitFor('!!game.waiter && game.torii.visible', 20000);
+      if (i === 0) {
+        const p0 = await js('game.torii.pos'); await sleep(2500);
+        check('the die waits for A (no automatic roll)', (await js('game.torii.pos')) === p0 && (await js('!!game.waiter')));
+      }
       await pad(P.A, 300);
       if (i === 0) { await shot('5-torii-roll'); check('A rolls the die', (await js('game.torii.pos')) > 0 || (await waitFor('game.torii.pos > 0', 5000))); }
     }
@@ -148,6 +177,16 @@ app.whenReady().then(async () => {
     await pad(P.A);
     await waitFor('!game.busy', 15000);
     check('Omikuji finished with the controller only', !(await js('game.busy')));
+
+    // ---- a bonus that lands during auto-spin waits for the player
+    await js("game.save.settings.turbo = true; game.refreshAll(); game.force = {feature:'torii'}; game.startAuto(10); 0");
+    await waitFor('!!game.waiter && game.inFeature', 15000);
+    await sleep(3000);
+    check('auto-spin does not start the Torii Path by itself', (await js('!!game.waiter')) && !(await js('game.torii.visible')));
+    for (let i = 0; i < 40 && (await js('game.inFeature')); i++) { if (await js('!!game.waiter')) await pad(P.A, 300); else await sleep(400); }
+    await js('game.stopAuto(); 0');
+    await waitFor('!game.busy', 30000);
+    check('Torii Path during auto-spin finished with A presses', !(await js('game.busy')));
 
     // ---- B stops auto-spin
     await js('game.startAuto(25); 0');

@@ -30,6 +30,8 @@ export interface Hud {
   buy: Modal; buyTorii: HTMLButtonElement; buyFs: HTMLButtonElement; buyToriiPrice: HTMLElement; buyFsPrice: HTMLElement;
   credits: Modal; creditBtns: HTMLButtonElement[]; creditInput: HTMLInputElement; creditHint: HTMLElement; creditAddBtn: HTMLButtonElement;
   settings: Modal; vol: Record<'master' | 'music' | 'sfx', HTMLInputElement>; muteBox: HTMLInputElement; motionSel: HTMLSelectElement; padList: HTMLElement;
+  menuRules: HTMLButtonElement; menuStats: HTMLButtonElement; menuFunds: HTMLButtonElement; menuFull: HTMLButtonElement;
+  padHints: HTMLElement;
   btnNewSession: HTMLButtonElement; btnResetStats: HTMLButtonElement; btnQuit: HTMLButtonElement;
   confirm: Modal; confirmText: HTMLElement; confirmYes: HTMLButtonElement; confirmNo: HTMLButtonElement;
   slip: HTMLElement; slipKanji: HTMLElement; slipName: HTMLElement; slipMeaning: HTMLElement; slipPrize: HTMLElement; slipNote: HTMLElement;
@@ -127,7 +129,12 @@ export function buildHud(root: HTMLElement): Hud {
     h('p', { class: 'note' }, `Up to $${ADD_CREDIT_MAX.toLocaleString()} per add.`));
 
   // settings
-  const settings = makeModal('settingsModal', 'Settings');
+  const settings = makeModal('settingsModal', 'Menu & Settings');
+  // shortcuts so a controller can reach every panel from here (Start opens this menu)
+  const menuRules = btn('', 'Rules & Pays');
+  const menuStats = btn('', 'Stats');
+  const menuFunds = btn('gold', 'Add Play Money');
+  const menuFull = btn('', 'Fullscreen');
   const slider = (v: string) => h('input', { type: 'range', min: '0', max: '1', step: '0.05', 'aria-label': v }) as HTMLInputElement;
   const vol = { master: slider('Master volume'), music: slider('Music volume'), sfx: slider('Sound effects volume') };
   const muteBox = h('input', { type: 'checkbox' }) as HTMLInputElement;
@@ -137,6 +144,7 @@ export function buildHud(root: HTMLElement): Hud {
   const btnResetStats = btn('red', 'Reset all stats');
   const btnQuit = btn('red', 'Quit game');
   settings.body.append(
+    h('div', { class: 'row menu-row' }, menuRules, menuStats, menuFunds, menuFull),
     h('label', { class: 'setting' }, 'Master', vol.master), h('label', { class: 'setting' }, 'Music', vol.music), h('label', { class: 'setting' }, 'Effects', vol.sfx),
     h('label', { class: 'setting' }, 'Mute', muteBox), h('label', { class: 'setting' }, 'Motion', motionSel),
     h('h4', {}, 'Controllers'), padList,
@@ -165,15 +173,17 @@ export function buildHud(root: HTMLElement): Hud {
 
   const toast = h('div', { id: 'toast' });
   const pressPrompt = h('div', { id: 'pressPrompt' });
+  // controller button guide (visible only while a controller is in use)
+  const padHints = h('div', { id: 'padHints' });
 
-  root.append(title, topBar, side, message, hud, autoMenu, denomMenu, buy.bg, credits.bg, settings.bg, confirm.bg, slip, debug, toast, pressPrompt);
+  root.append(title, topBar, side, message, hud, autoMenu, denomMenu, buy.bg, credits.bg, settings.bg, confirm.bg, slip, debug, toast, pressPrompt, padHints);
   return {
     root, title, balance: bal.v, balanceLabel: bal.l, bet: betB.v, betLabel: betB.l, win: winB.v, winLabel: winB.l, message,
     spinBtn, autoBtn, turboBtn, betMinus, betPlus, btnDenom, btnMoney, btnBuy, btnInfo, btnStats, btnSettings, btnFull, btnFunds, btnMute,
     featurePanel, fpTitle, fpLine1, fpLine2, fpLine3, autoMenu, denomMenu,
     buy, buyTorii, buyFs, buyToriiPrice, buyFsPrice,
     credits, creditBtns, creditInput, creditHint, creditAddBtn,
-    settings, vol, muteBox, motionSel, padList, btnNewSession, btnResetStats, btnQuit,
+    settings, vol, muteBox, motionSel, padList, menuRules, menuStats, menuFunds, menuFull, padHints, btnNewSession, btnResetStats, btnQuit,
     confirm, confirmText, confirmYes, confirmNo,
     slip, slipKanji, slipName, slipMeaning, slipPrize, slipNote,
     debug, debugBody, debugArmed, toast, pressPrompt,

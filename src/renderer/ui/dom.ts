@@ -20,11 +20,13 @@ export function svgUrl(svg: string) {
 export function makeModal(id: string, title: string | null, onClose?: () => void) {
   const body = h('div');
   const x = h('button', { class: 'btn red x', title: 'Close (Esc)' }, '✕');
-  const modal = h('div', { class: 'modal' }, x, title ? h('h2', {}, title) : null, body);
+  /** controller hint line, shown only while a controller is in use */
+  const hint = h('div', { class: 'pad-hint' }, 'A: select · B: back');
+  const modal = h('div', { class: 'modal' }, x, title ? h('h2', {}, title) : null, body, hint);
   const bg = h('div', { class: 'modal-bg', id });
   bg.append(modal);
   const api = {
-    bg, body, modal, x,
+    bg, body, modal, x, hint,
     isOpen: () => bg.classList.contains('open'),
     open() { bg.classList.add('open'); },
     close() { if (!bg.classList.contains('open')) return; bg.classList.remove('open'); onClose?.(); },

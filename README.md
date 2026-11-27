@@ -22,7 +22,7 @@ npm start          # build and launch the game in Electron
 | `npm run strips` | Print the base and free-spins reel strips built from the config |
 | `npm run test:smoke` | Automated Electron play-through with screenshots in `smoke-out/` |
 | `npm run test:persist` | Save safety and debug gating checks |
-| `npm run test:controller` | Plays the game and drives every panel with simulated controller presses |
+| `npm run test:controller` | Plays the game and drives every panel with simulated controller presses (including: bonuses never auto-play) |
 | `npm run test:gamepad` | Controller input mapping (several pads, D-pad repeat, sticks, non-standard pads) |
 | `npm run audio:levels` | Renders every sound and music track offline; fails on clipping, silence or mismatched music loudness |
 | `npm run dist` | Build the icon, a minified bundle, and the Windows installer + portable `.exe` in `dist/` |
@@ -102,13 +102,16 @@ On the Torii Path and at the Omikuji box you can also just tap the screen.
 
 | Button | Action |
 |---|---|
-| A | Spin / fast-forward; **roll the die on the Torii Path**; draw an Omikuji slip; continue at prompts (in panels: press the focused button) |
+| A | Spin / fast-forward; **roll the die on the Torii Path**; draw an Omikuji slip; continue at prompts (in panels: press the highlighted button) |
 | B | Back / close panel / stop auto |
 | X / Y | Auto-spin / Bonus buy |
-| D-pad / left stick | Bet − / + (in panels: move between buttons) |
+| D-pad / left stick | Bet − / + (in panels: move the highlight the way you press; down scrolls long pages) |
 | LB / RB | Denomination down / up |
 | LT / RT | Credits/dollars view / Turbo |
-| Start / View | Rules & paytable / Stats |
+| Start | Menu: Rules & Pays, Stats, Add Play Money, Fullscreen, volume and settings, quit (Start again closes it) |
+| View | Stats |
+
+Bonuses always wait for you: every bonus starts, and every Torii Path roll happens, only when you press A (or SPIN, or tap), even during auto-spin or after a fast-forward. While a controller is in use, a button guide shows in the top-left corner and prompts say "Press A".
 
 The game renders at 1920×1080 and scales to any window or screen (16:9, letterboxed on other shapes); upright phones get the 1080-wide portrait layout.
 
